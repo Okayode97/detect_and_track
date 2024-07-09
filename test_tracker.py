@@ -1,4 +1,5 @@
 import cv2
+import pytest
 import numpy as np
 from tracker import KF_filter, Detection, Tracker
 
@@ -101,4 +102,28 @@ class TestDetection:
         xyxy = simple_bounding_box.convert_xyhw_to_xyxy()
         np.testing.assert_array_equal(xyxy, np.array([10, 10, 30, 20]))
     
+class TestKF_filter:
     
+    @pytest.fixture
+    def diagonal_bbox(self):
+        bbox_detections = []
+
+        for i in range(0, 60, 1):
+            bbox_detections.append(Detection(np.array([i, i, 10, 10])))
+        
+        return bbox_detections
+
+
+    def test_simple_linear_motion(self, diagonal_bbox):
+        box_filter = KF_filter(dt=1)
+
+        for bbox_detection in diagonal_bbox:
+            box_filter.update(bbox_detection)
+    
+            box_filter.predict()
+
+            position, _ = box_filter.get_estimated_state()
+        
+            print(f"Position: {bbox_detection.bbox} | Predicted position: {position}")
+
+        assert False
