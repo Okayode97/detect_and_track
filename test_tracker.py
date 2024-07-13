@@ -6,7 +6,7 @@ from tracker import KF_filter, Detection, KalmanFilter, Q_discrete_white_noise
 
 class Demo_tracker:
 
-    def simple_linear_diagonal_case():
+    def simple_linear_diagonal_case(self):
         box_filter = KF_filter(dt=1)
 
         img = np.zeros((600, 600, 3))
@@ -44,10 +44,13 @@ class Demo_tracker:
                 break
 
 
-    def test_filter_on_tracking_mouse_cursor(self):
+    def filter_on_tracking_mouse_cursor(self):
+        # Initialize cursor position
+        cursor_position = (0, 0)
+
         # Function to update the cursor position
         def update_cursor_position(event, x, y, flags, param):
-            global cursor_position
+            nonlocal cursor_position
             if event == cv2.EVENT_MOUSEMOVE:
                 cursor_position = (x, y)
 
@@ -55,18 +58,16 @@ class Demo_tracker:
         width, height = 640, 480
         blank_screen = np.zeros((height, width, 3), dtype=np.uint8)
 
-        # Set up the window and mouse callback
-        cv2.namedWindow('Cursor Tracker')
-        cv2.setMouseCallback('Cursor Tracker', update_cursor_position)
-
-        # Initialize cursor position
-        cursor_position = (0, 0)
         box_hw = np.array([10, 10])
 
         measurement_color = (0, 255, 0)
         estimated_color = (255, 0, 0)
 
         box_filter = KF_filter(dt=1)
+
+        # Set up the window and mouse callback
+        cv2.namedWindow('Cursor Tracker')
+        cv2.setMouseCallback('Cursor Tracker', update_cursor_position)
 
         while True:
 
