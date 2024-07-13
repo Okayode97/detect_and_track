@@ -7,8 +7,6 @@ from tracker import KF_filter, Detection, KalmanFilter, Q_discrete_white_noise
 class Demo_tracker:
 
     def simple_linear_diagonal_case(self):
-        box_filter = KF_filter(dt=1)
-
         img = np.zeros((600, 600, 3))
         red = (0, 0, 255)
         green = (0, 255, 0)
@@ -17,7 +15,10 @@ class Demo_tracker:
         # box height & width
         box_hw = 10
 
-        for i in range(0, 600, 1):
+        # intialise filter and read first detection
+        box_filter = KF_filter(np.array([0, 0, box_hw, box_hw]), dt=1)
+        
+        for i in range(1, 600, 1):
             start_point = np.array([i, i])
 
             # update the filter
@@ -62,7 +63,8 @@ class Demo_tracker:
         measurement_color = (0, 255, 0)
         estimated_color = (255, 0, 0)
 
-        box_filter = KF_filter(dt=1)
+        # intiialise filter and read first position
+        box_filter = KF_filter(detection=np.append(cursor_position, box_hw, axis=0), dt=1)
 
         # Set up the window and mouse callback
         cv2.namedWindow('Cursor Tracker')
@@ -127,23 +129,6 @@ class Demo_tracker:
 
             print(f"measurement: {i} | prediction: {f.x}")
 
-
-class TestDetection:
-
-    def test_detection_are_properly_populated(self):
-        simple_bounding_box = Detection(np.array([0, 0, 10, 10]))
-        np.testing.assert_array_equal(simple_bounding_box.bbox, np.array([0, 0, 10, 10]))
-    
-    def test_detections_properly_convert_xyxy_to_xyhw(self):
-        simple_bounding_box = Detection()
-        simple_bounding_box.convert_xyxy_to_xyhw(np.array([10, 10, 30, 20]))
-        np.testing.assert_array_equal(simple_bounding_box.bbox, np.array([10, 10, 20, 10]))
-    
-    def test_detections_can_be_conveted_back_to_xyxy(self):
-        simple_bounding_box = Detection(np.array([10, 10, 20, 10]))
-        xyxy = simple_bounding_box.convert_xyhw_to_xyxy()
-        np.testing.assert_array_equal(xyxy, np.array([10, 10, 30, 20]))
-
     
 class TestKF_filter:
     
@@ -157,9 +142,9 @@ class TestKF_filter:
 
 
     def test_simple_linear_motion(self, diagonal_bbox):
-        box_filter = KF_filter(dt=1)
+        box_filter = KF_filter(detection=diagonal_bbox[0], dt=1)
 
-        for i, bbox_detection in enumerate(diagonal_bbox):
+        for i, bbox_detection in enumerate(diagonal_bbox[1:]):
             box_filter.predict()
 
             # test performance by dropping different detections

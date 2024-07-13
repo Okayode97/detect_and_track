@@ -15,23 +15,8 @@ from filterpy.common import Q_discrete_white_noise
 from scipy.linalg import block_diag
 
 
-@dataclass
-class Detection:
-    # expected format is xyhw
-    bbox: Optional[np.ndarray] = None # x, y, h, w
-
-    def convert_xyxy_to_xyhw(self, xyxy: np.ndarray):
-        height = xyxy[2] - xyxy[0]
-        width = xyxy[-1] - xyxy[1]
-        self.bbox = np.array([xyxy[0], xyxy[1], height, width])
-    
-    def convert_xyhw_to_xyxy(self):
-        if self.bbox is not None:
-            return np.array([self.bbox[0], self.bbox[1],
-                             self.bbox[0]+self.bbox[2], self.bbox[1]+self.bbox[3]])
-
 class KF_filter:
-    def __init__(self, dt):
+    def __init__(self, detection: np.ndarray, dt: float):
         # state variables: x, x_hat, y, y_hat, h, h_hat,  w, w_hat
         # measurement: x, y, h, w
         self.filter = KalmanFilter(dim_x=8, dim_z=4)
@@ -74,7 +59,8 @@ class KF_filter:
                                    [0, 0, 0, 1]])
 
         # define initial state
-        self.filter.x = np.array([0, 0, 0, 0, 0, 0, 0, 0])
+        # populate the initial state using the measurement, set the velocity to be 0 
+        self.filter.x = np.array([(int(x), 0) for x in detection]).reshape(-1, 8)[0]
 
         # define the initial state covariance matrix
         self.filter.P *=1e+2
@@ -103,14 +89,32 @@ class KF_filter:
         return (estimated_position, estimated_velocity)
 
 
+@dataclass
+class Track:
+    # expected format is xyhw
+    filter: KF_filter # x, y, h, w
+    filter_id: int
+
+
 class Tracker:
     def __init__(self):
-        self.trackers: list[KF_filter] = []
+        self.list_of_tracks: list[Track] = []
     
-    def associate(self):
+    def associate_detections_to_tracks(self, detections):
         pass
 
-    def update_tracks(self):
-        pass
+    # detections = np.ndarray
+    def update_filters(self, detections: np.ndarray):
+        
+        # associate detections to tracks
+
+        # for associated detections, update it with the associated detection
+
+        # if there are no associated detection, create a new track for the detection
+
+        # if there are no associated track for a detection,
+        # - update it with empty detection, but increase it's staleness, 
+        # - ultimately remove it if it's staleness goes beyong a certain point
+
     
-    pass
+        pass
