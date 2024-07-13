@@ -43,7 +43,6 @@ class Demo_tracker:
             if cv2.waitKey(1) == ord('q'):
                 break
 
-
     def filter_on_tracking_mouse_cursor(self):
         # Initialize cursor position
         cursor_position = (0, 0)
@@ -162,7 +161,10 @@ class TestKF_filter:
 
         for i, bbox_detection in enumerate(diagonal_bbox):
             box_filter.predict()
-            box_filter.update(bbox_detection)
+
+            # test performance by dropping different detections
+            if i not in [15, 30, 45, 60]:
+                box_filter.update(bbox_detection)
             position, velocity = box_filter.get_estimated_state()
 
             np.testing.assert_allclose(bbox_detection, position, atol=0.1)
@@ -170,3 +172,8 @@ class TestKF_filter:
             # give the model enough time to get a better understanding of motion of the box
             if i > 10:
                 np.testing.assert_allclose(np.array([1, 1, 0, 0]), velocity, atol=0.1)
+
+
+
+if __name__ == "__main__":
+    Demo_tracker().filter_on_tracking_mouse_cursor()

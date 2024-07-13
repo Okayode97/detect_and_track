@@ -3,6 +3,8 @@ Script to contain filters and trackers to track bounding box returned by a detec
 Resources:
 - Kalman-and-Bayesian-Filters-in-Python/08-Designing-Kalman-Filters.ipynb
 - https://thekalmanfilter.com/kalman-filter-explained-simply/
+- https://github.com/abewley/sort/blob/master/sort.py
+- https://filterpy.readthedocs.io/en/latest/kalman/KalmanFilter.html
 """
 from typing import Optional
 from dataclasses import dataclass
@@ -104,5 +106,11 @@ class KF_filter:
 class Tracker:
     def __init__(self):
         self.trackers: list[KF_filter] = []
+    
+    def associate(self):
+        pass
+
+    def update_tracks(self):
+        pass
     
     pass
