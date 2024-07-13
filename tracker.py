@@ -66,24 +66,24 @@ class KF_filter:
         # define the measurement covariance matrix
         # similar to the state variable.
         # it is assume that the noise in the measurements are independent from each other
-        self.filter.R = np.array([[1e-1, 0, 0, 0],
-                                   [0, 1e-1, 0, 0],
-                                   [0, 0, 1e-1, 0],
-                                   [0, 0, 0, 1e-1]])
+        self.filter.R = np.array([[1, 0, 0, 0],
+                                   [0, 1, 0, 0],
+                                   [0, 0, 1, 0],
+                                   [0, 0, 0, 1]])
 
         # define initial state
-        self.filter.x = np.array([[0, 0, 0, 0, 0, 0, 0, 0]]).T
+        self.filter.x = np.array([0, 0, 0, 0, 0, 0, 0, 0])
 
-        # define the state covariance matrix
-        self.filter.P = np.eye(8)*1e+3
+        # define the initial state covariance matrix
+        self.filter.P *=1e+2
 
     # predict
     def predict(self) -> None:
         self.filter.predict()
 
     # update
-    def update(self, detection: Detection) -> None:
-        self.filter.update(detection.bbox.T)
+    def update(self, detection: np.ndarray) -> None:
+        self.filter.update(detection)
 
     # get current estimated state
     def get_estimated_state(self) -> tuple[np.array]:
