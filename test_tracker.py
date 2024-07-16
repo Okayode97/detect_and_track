@@ -1,7 +1,7 @@
 import cv2
 import pytest
 import numpy as np
-from tracker import KF_filter, Detection, KalmanFilter, Q_discrete_white_noise
+from tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre
 
 
 class Demo_tracker:
@@ -158,7 +158,14 @@ class TestKF_filter:
             if i > 10:
                 np.testing.assert_allclose(np.array([1, 1, 0, 0]), velocity, atol=0.1)
 
-
+@pytest.mark.parametrize("bbox, expected_centre", [(np.array([0, 0, 10, 10]), np.array([5, 5])),
+                                                    (np.array([34, 52, 120, 80]), np.array([ 74., 112.])),
+                                                    (np.array([210, 178, 95, 130]), np.array([275. , 225.5])),
+                                                    (np.array([89, 44, 150, 110]), np.array([144., 119.])),
+                                                    (np.array([300, 250, 75, 200]), np.array([400. , 287.5])),
+                                                    ])
+def test_get_bbox_centre(bbox, expected_centre):
+    np.testing.assert_array_equal(get_bbox_centre(bbox), expected_centre)
 
 if __name__ == "__main__":
     Demo_tracker().filter_on_tracking_mouse_cursor()

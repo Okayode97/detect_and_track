@@ -13,6 +13,7 @@ import numpy as np
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 from scipy.linalg import block_diag
+from scipy.optimize import linear_sum_assignment
 
 
 class KF_filter:
@@ -95,18 +96,51 @@ class Track:
     filter: KF_filter # x, y, h, w
     filter_id: int
 
+# bbox (np.ndarray): x, y, h, w
+# note x linked to w and not h, vice-versa with y
+def get_bbox_centre(bbox: np.ndarray) -> np.ndarray:
+    return np.array([bbox[0] + bbox[3]/2, bbox[1] + bbox[2]/2])
 
 class Tracker:
     def __init__(self):
         self.list_of_tracks: list[Track] = []
     
-    def associate_detections_to_tracks(self, detections):
-        pass
+    def associate_detections_to_tracks(self, detections: np.ndarray):
+        """
+        associate detections to existing tracks. Would return an empty array if there is no
+        track to associate detections with.
+        Args:
+            - detections: np.ndarray, (N, x, y, h, w)
+        """
+        
+        # define a matrix composed of distance between estimated bbox & actual bbox
+        cost_matrix: np.array = np.empty((0, len(detections)))
+
+        # get the estimated bbox centre
+        for track in self.list_of_tracks:
+            filter_bbox_centre = get_bbox_centre(track.filter.get_estimated_state()[0])
+            filter_distances: np.array = np.array([])
+
+            # get detections bbox centre
+            for detection in detections:
+                measurement_bbox_centre = get_bbox_centre(detection)
+                filter_distances = np.append(filter_distances, np.linalg.norm(measurement_bbox_centre - filter_bbox_centre), axis=0)
+
+            # append the vectors together    
+            cost_matrix = np.vstack([cost_matrix, filter_distances])
+
+        # run linear sum assignment to get associations between tracks and centre
+        row_ind, _ = linear_sum_assignment(cost_matrix)
+        
+        # map row to col (track to detection)
+        return row_ind
+
 
     # detections = np.ndarray
     def update_filters(self, detections: np.ndarray):
         
         # associate detections to tracks
+        associations = self.associate_detections_to_tracks(detections)
 
         # for associated detections, update it with the associated detection
 
