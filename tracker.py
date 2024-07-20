@@ -107,6 +107,7 @@ def get_bbox_centre(bbox: np.ndarray) -> np.ndarray:
 class Tracker:
     def __init__(self):
         self.list_of_tracks: list[Track] = []
+        self.track_id: int = 0
     
     def associate_detections_to_tracks(self, detections: np.ndarray) -> dict[int, int]:
         """
@@ -152,8 +153,17 @@ class Tracker:
         for filter_id, associated_detection_id in associations.items():
             self.list_of_tracks[filter_id].filter.update(detections[associated_detection_id])
     
-        # if there are no associated detection, create a new track for the detection
+        # if there are no associated track for a detection, update it with an empty detection
+        for i, _ in enumerate(self.list_of_tracks):
+            if i not in associations.keys():
+                self.list_of_tracks[i].filter.update(np.array([]))        
 
-        # if there are no associated track for a detection,
+        # if there are no associated detection, create a new track for the detection
+        for i, detection in enumerate(detections):
+             if i not in associations.values():
+                track_ = Track(KF_filter(detection, 1.0), self.track_id)
+                self.list_of_tracks.append(track_)
+                self.track_id += 1
+    
         # - update it with empty detection, but increase it's staleness, 
         # - ultimately remove it if it's staleness goes beyong a certain point

@@ -202,34 +202,63 @@ class TestTracker:
 
     def test_associate_detections_to_tracks_correctly_associates_detections(self, instantiated_tracker):
         # detections placed in order of horizontal, vertical
-        detections = np.array([[2, 11, 10, 10], [11, 0, 10, 10]])
+        detections = np.array([[2, 10, 10, 10], [10, 0, 10, 10]])
 
         # instantiated tracker placed in order of horizontal, vertical
         association = instantiated_tracker.associate_detections_to_tracks(detections)
         
-        assert association[0] == 0
-        assert association[1] == 1
+        assert association == {0: 0, 1:1}
 
         # ------next time step----------
 
-        # detections placed in order of vertical, horizontal
-        detections = np.array([[12, 0, 10, 10], [2, 12, 10, 10]])
+        # detections placed in order of vertical, horizontal (switched order)
+        detections = np.array([[11, 0, 10, 10], [2, 11, 10, 10]])
 
         # instantiated tracker placed in order of horizontal, vertical
         association = instantiated_tracker.associate_detections_to_tracks(detections)
         
-        assert association[0] == 1
-        assert association[1] == 0
+        assert association == {0: 1, 1:0} # track to detection
     
     def test_associate_detections_function_does_not_create_associations_for_new_detections(self, instantiated_tracker):
         # detections placed in order of horizontal, vertical, new detection
-        detections = np.array([[2, 11, 10, 10], [11, 0, 10, 10], [15, 15, 10, 10]])
+        detections = np.array([[2, 10, 10, 10], [10, 0, 10, 10], [15, 15, 10, 10]])
 
         # instantiated tracker placed in order of horizontal, vertical
         association = instantiated_tracker.associate_detections_to_tracks(detections)
         
-        assert association[0] == 0
-        assert association[1] == 1
+        assert association == {0: 0, 1:1}
+
+    def test_associate_detection_function_does_not_create_association_for_track_with_missing_detection(self, instantiated_tracker):
+        
+        # detections placed in order of horizontal, vertical
+        detections = np.array([[2, 10, 10, 10], [10, 0, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        track_= Track(KF_filter(np.array([15, 15, 10, 10]), 1.0), 3)
+        instantiated_tracker.list_of_tracks.append(track_)
+        association = instantiated_tracker.associate_detections_to_tracks(detections)
+        
+        assert association == {0: 0, 1:1}
+
+    def test_unassociated_filters_are_updated_with_empty_detection_and_return_estimated_detection(self, instantiated_tracker):
+        # detections placed in order of horizontal, (vertical detection is dropped)
+        detections = np.array([[2, 10, 10, 10]]) #, [10, 0, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        instantiated_tracker.update_filters(detections)
+
+        np.testing.assert_allclose(instantiated_tracker.list_of_tracks[1].filter.get_estimated_state()[0],
+                                    np.array([10, 0, 10, 10]), atol=0.1)
+
+    def test_new_filters_are_created_for_unassociated_detections(self, instantiated_tracker):
+        # detections placed in order of horizontal, vertical, new detection
+        detections = np.array([[2, 10, 10, 10], [10, 0, 10, 10], [15, 15, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        instantiated_tracker.update_filters(detections)
+
+        assert len(instantiated_tracker.list_of_tracks) == 3
+
 
 if __name__ == "__main__":
     Demo_tracker().filter_on_tracking_mouse_cursor()
