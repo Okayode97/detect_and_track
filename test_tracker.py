@@ -1,7 +1,7 @@
 import cv2
 import pytest
 import numpy as np
-from tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre
+from tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre, Tracker, Track
 
 
 class Demo_tracker:
@@ -22,7 +22,6 @@ class Demo_tracker:
             start_point = np.array([i, i])
 
             # update the filter
-            box_filter.predict()
             box_filter.update(np.append(start_point, np.array([box_hw, box_hw]), axis=0))
 
             # get the estimated position and velocity
@@ -71,8 +70,6 @@ class Demo_tracker:
         cv2.setMouseCallback('Cursor Tracker', update_cursor_position)
 
         while True:
-
-            box_filter.predict()
             box_filter.update(np.append(cursor_position, box_hw, axis=0))
 
             estimated_position, estimated_velocity = box_filter.get_estimated_state()
@@ -145,11 +142,11 @@ class TestKF_filter:
         box_filter = KF_filter(detection=diagonal_bbox[0], dt=1)
 
         for i, bbox_detection in enumerate(diagonal_bbox[1:]):
-            box_filter.predict()
-
             # test performance by dropping different detections
             if i not in [15, 30, 45, 60]:
                 box_filter.update(bbox_detection)
+            else:
+                box_filter.update(np.array([]))
             position, velocity = box_filter.get_estimated_state()
 
             np.testing.assert_allclose(bbox_detection, position, atol=0.1)
@@ -166,6 +163,73 @@ class TestKF_filter:
                                                     ])
 def test_get_bbox_centre(bbox, expected_centre):
     np.testing.assert_array_equal(get_bbox_centre(bbox), expected_centre)
+
+
+class TestTracker:
+
+    @pytest.fixture()
+    def instantiated_tracker(self):
+        kf_filter_tracker = Tracker()
+
+        # initialise first detection
+        bbox_horizontal = np.array([2, 0, 10, 10]) # changing y
+        bbox_vertical = np.array([0, 0, 10, 10]) # changing x
+
+        # initialise filters
+        KF_filter_horizontal = KF_filter(bbox_horizontal, 1.0)
+        KF_filter_vertical = KF_filter(bbox_vertical, 1.0)
+
+        # initialise tracks
+        kf_filter_tracker.list_of_tracks.append(Track(KF_filter_horizontal, 1))
+        kf_filter_tracker.list_of_tracks.append(Track(KF_filter_vertical, 2))
+        
+        # update filters for 10 iterations
+        # done to allow filter to develop a model of the detection's movements
+        for i in range(1, 10, 1):            
+            kf_filter_tracker.list_of_tracks[0].filter.update(np.array([2, i, 10, 10]))
+            kf_filter_tracker.list_of_tracks[1].filter.update(np.array([i, 0, 10, 10]))
+
+        
+        # check that filter correctly estimates next state of detection after 10 iterations
+        # track 0, horizontal. track 1, vertical.
+        np.testing.assert_allclose(kf_filter_tracker.list_of_tracks[0].filter.get_estimated_state()[0],
+                                      np.array([2, 10, 10, 10]), rtol=0.1)
+        np.testing.assert_allclose(kf_filter_tracker.list_of_tracks[1].filter.get_estimated_state()[0],
+                                      np.array([10, 0, 10, 10]), rtol=0.1)
+        
+        return kf_filter_tracker
+        
+
+    def test_associate_detections_to_tracks_correctly_associates_detections(self, instantiated_tracker):
+        # detections placed in order of horizontal, vertical
+        detections = np.array([[2, 11, 10, 10], [11, 0, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        association = instantiated_tracker.associate_detections_to_tracks(detections)
+        
+        assert association[0] == 0
+        assert association[1] == 1
+
+        # ------next time step----------
+
+        # detections placed in order of vertical, horizontal
+        detections = np.array([[12, 0, 10, 10], [2, 12, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        association = instantiated_tracker.associate_detections_to_tracks(detections)
+        
+        assert association[0] == 1
+        assert association[1] == 0
+    
+    def test_associate_detections_function_does_not_create_associations_for_new_detections(self, instantiated_tracker):
+        # detections placed in order of horizontal, vertical, new detection
+        detections = np.array([[2, 11, 10, 10], [11, 0, 10, 10], [15, 15, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        association = instantiated_tracker.associate_detections_to_tracks(detections)
+        
+        assert association[0] == 0
+        assert association[1] == 1
 
 if __name__ == "__main__":
     Demo_tracker().filter_on_tracking_mouse_cursor()

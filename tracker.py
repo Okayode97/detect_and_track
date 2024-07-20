@@ -72,7 +72,9 @@ class KF_filter:
 
     # update
     def update(self, detection: np.ndarray) -> None:
-        self.filter.update(detection)
+        self.filter.predict()
+        if detection.size != 0:
+            self.filter.update(detection)
 
     # get current estimated state
     def get_estimated_state(self) -> tuple[np.array]:
@@ -101,11 +103,12 @@ class Track:
 def get_bbox_centre(bbox: np.ndarray) -> np.ndarray:
     return np.array([bbox[0] + bbox[3]/2, bbox[1] + bbox[2]/2])
 
+
 class Tracker:
     def __init__(self):
         self.list_of_tracks: list[Track] = []
     
-    def associate_detections_to_tracks(self, detections: np.ndarray):
+    def associate_detections_to_tracks(self, detections: np.ndarray) -> dict[int, int]:
         """
         associate detections to existing tracks. Would return an empty array if there is no
         track to associate detections with.
@@ -124,16 +127,19 @@ class Tracker:
             # get detections bbox centre
             for detection in detections:
                 measurement_bbox_centre = get_bbox_centre(detection)
-                filter_distances = np.append(filter_distances, np.linalg.norm(measurement_bbox_centre - filter_bbox_centre), axis=0)
+                filter_distances = np.append(filter_distances, np.linalg.norm(measurement_bbox_centre - filter_bbox_centre))
 
             # append the vectors together    
             cost_matrix = np.vstack([cost_matrix, filter_distances])
 
         # run linear sum assignment to get associations between tracks and centre
-        row_ind, _ = linear_sum_assignment(cost_matrix)
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        associations = {}
+        for filter_id, associated_detection_id in zip(row_ind, col_ind):
+            associations[int(filter_id)] = int(associated_detection_id)
         
-        # map row to col (track to detection)
-        return row_ind
+        return associations
 
 
     # detections = np.ndarray
@@ -143,12 +149,11 @@ class Tracker:
         associations = self.associate_detections_to_tracks(detections)
 
         # for associated detections, update it with the associated detection
-
+        for filter_id, associated_detection_id in associations.items():
+            self.list_of_tracks[filter_id].filter.update(detections[associated_detection_id])
+    
         # if there are no associated detection, create a new track for the detection
 
         # if there are no associated track for a detection,
         # - update it with empty detection, but increase it's staleness, 
         # - ultimately remove it if it's staleness goes beyong a certain point
-
-    
-        pass
