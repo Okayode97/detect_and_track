@@ -321,6 +321,50 @@ class TestTracker:
             for track, detection in zip(tracker_.list_of_tracks, detections):
                 np.testing.assert_allclose(track.filter.get_estimated_state()[0], detection, atol=0.1)
 
+    def test_unassociated_track_staleness_increase(self, instantiated_tracker):
+        # detections placed in order of horizontal, (vertical detection is dropped)
+        detections = np.array([[2, 10, 10, 10]]) #, [10, 0, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        instantiated_tracker.update_filters(detections)
+
+        assert instantiated_tracker.list_of_tracks[1].filter.staleness_count == 1
+
+
+    def test_re_associated_track_staleness_decreases(self, instantiated_tracker):
+        # detections placed in order of horizontal, (vertical detection is dropped)
+        detections = np.array([[2, 10, 10, 10]]) #, [10, 0, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        instantiated_tracker.update_filters(detections)
+
+        assert instantiated_tracker.list_of_tracks[1].filter.staleness_count == 1
+
+        # detections placed in order of horizontal, (vertical detection is dropped)
+        detections = np.array([[2, 11, 10, 10], [11, 0, 10, 10]])
+
+        # instantiated tracker placed in order of horizontal, vertical
+        instantiated_tracker.update_filters(detections)
+
+        assert instantiated_tracker.list_of_tracks[1].filter.staleness_count == 0
+
+    def test_track_with_max_staleness_are_removed(self, multiple_simple_detections):
+        tracker_ = Tracker()
+        
+        # load all detections for first 10 time steps
+        for detections in multiple_simple_detections[:10]:
+            tracker_.update_filters(detections)
+
+        # assert on number of tracks
+        assert len(tracker_.list_of_tracks) == 3
+
+        # for the next 7 time steps drop the last detection and feed it in to tracker
+        for detections in multiple_simple_detections[10:17]:
+            detections = detections[:-1]
+            tracker_.update_filters(detections)
+
+        # assert on number of tracks
+        assert len(tracker_.list_of_tracks) == 2
 
 if __name__ == "__main__":
     Demo_tracker().filter_on_tracking_mouse_cursor()
