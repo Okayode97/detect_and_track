@@ -292,8 +292,6 @@ class TestTracker:
                 # update with some detections dropped
                 dropped_detections = detections.copy()
                 dropped_detections =  np.delete(dropped_detections, np.random.randint(2), axis=0)
-                print("====================")
-                print(f"{dropped_detections=}\n")
                 tracker_.update_filters(dropped_detections)
             else:
                 tracker_.update_filters(detections)

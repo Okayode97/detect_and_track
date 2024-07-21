@@ -67,7 +67,12 @@ class KF_filter:
         self.filter.P *=1e+2
 
         # update count
+        # temp solution to determine when to use prediction or estimation
         self.update_count = 0
+
+        # staleness count
+        # used to track how long the filter has not recieved measurement
+        self.staleness_count = 0
 
     # predict
     def predict(self) -> None:
@@ -78,7 +83,7 @@ class KF_filter:
         self.filter.predict()
         if detection.size != 0:
             self.update_count += 1
-            self.update_count = max(25, self.update_count)
+            self.update_count = min(25, self.update_count)
             self.filter.update(detection)
 
     # get current estimated state
@@ -128,6 +133,9 @@ class Tracker:
     def __init__(self):
         self.list_of_tracks: list[Track] = []
         self.track_id: int = 0
+
+        self.track_max_staleness = 7
+        self.track_update_count_threshold = 20
     
     def associate_detections_to_tracks(self, detections: np.ndarray) -> dict[int, int]:
         """
@@ -144,12 +152,13 @@ class Tracker:
         for track in self.list_of_tracks:
             # use filter prediction for next time step if it's recieved updates 20, if less use filters estimation
             # TODO: Ideally use error in state co-variance matrix to determine use of prediction
-            track_bbox_prediction = track.filter.get_prediction()[0] if track.filter.update_count > 20 else track.filter.get_estimated_state()[0] 
+            track_bbox_prediction = track.filter.get_prediction()[0] if track.filter.update_count > self.track_update_count_threshold else track.filter.get_estimated_state()[0] 
             filter_bbox_centre = get_bbox_centre(track_bbox_prediction)
             filter_distances: np.array = np.array([])
 
             # get detections bbox centre
             for detection in detections:
+                # TODO: Ideally switch to using IOU
                 measurement_bbox_centre = get_bbox_centre(detection)
                 filter_distances = np.append(filter_distances, np.linalg.norm(measurement_bbox_centre - filter_bbox_centre))
 
@@ -172,14 +181,28 @@ class Tracker:
         # associate detections to tracks
         associations = self.associate_detections_to_tracks(detections)
 
-        # for associated detections, update it with the associated detection
+        # for associated track, update it with the associated detection
         for filter_id, associated_detection_id in associations.items():
             self.list_of_tracks[filter_id].filter.update(detections[associated_detection_id])
+
+            # decrease staleness count if it's greater than 0
+            if self.list_of_tracks[filter_id].filter.staleness_count > 0:
+                self.list_of_tracks[filter_id].filter.staleness_count-=1 
+                self.list_of_tracks[filter_id].filter.staleness_count = max(0, self.list_of_tracks[filter_id].filter.staleness_count)            
 
         # if there are no associated track for a detection, update it with an empty detection
         for i, _ in enumerate(self.list_of_tracks):
             if i not in associations.keys():
-                self.list_of_tracks[i].filter.update(np.array([]))        
+                self.list_of_tracks[i].filter.update(np.array([]))
+
+                # increase staleness count for unassociated track, maxed at 7
+                self.list_of_tracks[i].filter.staleness_count+=1 
+                self.list_of_tracks[i].filter.staleness_count = min(self.track_max_staleness, self.list_of_tracks[i].filter.staleness_count)
+
+                # remove track if it's staleness is at max value.
+                if self.list_of_tracks[i].filter.staleness_count == self.track_max_staleness:
+                    self.list_of_tracks.pop(i)
+
 
         # if there are no associated detection, create a new track for the detection
         for i, detection in enumerate(detections):
@@ -187,5 +210,3 @@ class Tracker:
                 track_ = Track(KF_filter(detection, 1.0), self.track_id)
                 self.list_of_tracks.append(track_)
                 self.track_id += 1
-    
-        # - ultimately remove it if it's staleness goes beyong a certain point
