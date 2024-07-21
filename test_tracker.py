@@ -1,6 +1,7 @@
 import cv2
 import pytest
 import numpy as np
+import random
 from tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre, Tracker, Track
 
 
@@ -258,6 +259,70 @@ class TestTracker:
         instantiated_tracker.update_filters(detections)
 
         assert len(instantiated_tracker.list_of_tracks) == 3
+
+    @pytest.fixture()
+    def multiple_simple_detections(self) -> list[np.array]:
+        detections: list[np.array] =[] 
+        for i in range(1, 25, 1):
+            detection = np.array([[i, 0, 10, 10], # vertical
+                                  [0, i, 10, 10], # horizontal
+                                  [i, i, 10, 10]  # diagonal 
+                                  ])
+            detections.append(detection)
+        return detections
+
+    def test_tracker_correctly_associates_and_track_detections(self, multiple_simple_detections):
+        tracker_ = Tracker()
+
+        # --------- first time step --------- 
+        # check that there are no tracks initially
+        assert len(tracker_.list_of_tracks) == 0
+        
+        # update tracker's filters
+        tracker_.update_filters(multiple_simple_detections[0])
+
+        # since there are no filters, create filters
+        assert len(tracker_.list_of_tracks) == 3
+
+        # --------- subsequent time steps [dropped detection] ---------
+        for i, detections in enumerate(multiple_simple_detections[1:], 1):
+
+            # drop some detection 10, 15, 20, 25
+            if i in [10, 15, 20, 25]:
+                # update with some detections dropped
+                dropped_detections = detections.copy()
+                dropped_detections =  np.delete(dropped_detections, np.random.randint(2), axis=0)
+                print("====================")
+                print(f"{dropped_detections=}\n")
+                tracker_.update_filters(dropped_detections)
+            else:
+                tracker_.update_filters(detections)
+
+            # iterate through each track and detection and assert that they are correctly associated
+            for track, detection in zip(tracker_.list_of_tracks, detections):
+                np.testing.assert_allclose(track.filter.get_estimated_state()[0], detection, atol=0.1)
+                    
+        # --------- subsequent time steps [new detection] ---------
+        new_set_of_detections: list[np.array] =[] 
+
+        x = 35
+        for i in range(25, 35, 1):
+            detections = np.array([[i, 0, 10, 10], # vertical
+                                   [0, i, 10, 10],  # horizontal
+                                   [i, i, 10, 10],  # diagonal 
+                                   [x, x, 10, 10]   # diagonal (inverted)
+                                  ])
+            new_set_of_detections.append(detections)
+            x -= 1
+        
+        for detections in new_set_of_detections:
+            tracker_.update_filters(detections)
+
+            # iterate through each track and detection and assert that they are correctly associated
+            for track, detection in zip(tracker_.list_of_tracks, detections):
+                np.testing.assert_allclose(track.filter.get_estimated_state()[0], detection, atol=0.1)
+        
+        assert False
 
 
 if __name__ == "__main__":

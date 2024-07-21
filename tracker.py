@@ -149,21 +149,31 @@ class Tracker:
         # associate detections to tracks
         associations = self.associate_detections_to_tracks(detections)
 
+        print(f"======================")
+        print(f"{associations=}")
+
         # for associated detections, update it with the associated detection
         for filter_id, associated_detection_id in associations.items():
+            print(f"Associated track to detection....")
+            print(f"Associated track state (before update): {self.list_of_tracks[filter_id].filter.get_estimated_state()[0]}")
+
             self.list_of_tracks[filter_id].filter.update(detections[associated_detection_id])
+
+            print(f"Associated track state (after update): {self.list_of_tracks[filter_id].filter.get_estimated_state()[0]}")
+            print(f"Associated detection: {detections[associated_detection_id]}")
     
         # if there are no associated track for a detection, update it with an empty detection
         for i, _ in enumerate(self.list_of_tracks):
             if i not in associations.keys():
+                print(f"Filter {self.list_of_tracks[i].filter.get_estimated_state()[0]} has no associated detection")
                 self.list_of_tracks[i].filter.update(np.array([]))        
 
         # if there are no associated detection, create a new track for the detection
         for i, detection in enumerate(detections):
              if i not in associations.values():
+                print(f"Creating filter for detection: {detection}")
                 track_ = Track(KF_filter(detection, 1.0), self.track_id)
                 self.list_of_tracks.append(track_)
                 self.track_id += 1
     
-        # - update it with empty detection, but increase it's staleness, 
         # - ultimately remove it if it's staleness goes beyong a certain point
