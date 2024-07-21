@@ -66,6 +66,9 @@ class KF_filter:
         # define the initial state covariance matrix
         self.filter.P *=1e+2
 
+        # update count
+        self.update_count = 0
+
     # predict
     def predict(self) -> None:
         self.filter.predict()
@@ -74,6 +77,8 @@ class KF_filter:
     def update(self, detection: np.ndarray) -> None:
         self.filter.predict()
         if detection.size != 0:
+            self.update_count += 1
+            self.update_count = max(25, self.update_count)
             self.filter.update(detection)
 
     # get current estimated state
@@ -89,6 +94,21 @@ class KF_filter:
                                        self.filter.x[3],
                                        self.filter.x[5],
                                        self.filter.x[7]])
+        return (estimated_position, estimated_velocity)
+
+    def get_prediction(self):
+        # returns prediction for next time step
+        predicted_state_variable, _ = self.filter.get_prediction()
+
+        estimated_position = np.array([predicted_state_variable[0],
+                                       predicted_state_variable[2],
+                                       predicted_state_variable[4],
+                                       predicted_state_variable[6]])
+
+        estimated_velocity = np.array([predicted_state_variable[1],
+                                       predicted_state_variable[3],
+                                       predicted_state_variable[5],
+                                       predicted_state_variable[7]])
         return (estimated_position, estimated_velocity)
 
 
@@ -122,7 +142,10 @@ class Tracker:
 
         # get the estimated bbox centre
         for track in self.list_of_tracks:
-            filter_bbox_centre = get_bbox_centre(track.filter.get_estimated_state()[0])
+            # use filter prediction for next time step if it's recieved updates 20, if less use filters estimation
+            # TODO: Ideally use error in state co-variance matrix to determine use of prediction
+            track_bbox_prediction = track.filter.get_prediction()[0] if track.filter.update_count > 20 else track.filter.get_estimated_state()[0] 
+            filter_bbox_centre = get_bbox_centre(track_bbox_prediction)
             filter_distances: np.array = np.array([])
 
             # get detections bbox centre
@@ -149,29 +172,18 @@ class Tracker:
         # associate detections to tracks
         associations = self.associate_detections_to_tracks(detections)
 
-        print(f"======================")
-        print(f"{associations=}")
-
         # for associated detections, update it with the associated detection
         for filter_id, associated_detection_id in associations.items():
-            print(f"Associated track to detection....")
-            print(f"Associated track state (before update): {self.list_of_tracks[filter_id].filter.get_estimated_state()[0]}")
-
             self.list_of_tracks[filter_id].filter.update(detections[associated_detection_id])
 
-            print(f"Associated track state (after update): {self.list_of_tracks[filter_id].filter.get_estimated_state()[0]}")
-            print(f"Associated detection: {detections[associated_detection_id]}")
-    
         # if there are no associated track for a detection, update it with an empty detection
         for i, _ in enumerate(self.list_of_tracks):
             if i not in associations.keys():
-                print(f"Filter {self.list_of_tracks[i].filter.get_estimated_state()[0]} has no associated detection")
                 self.list_of_tracks[i].filter.update(np.array([]))        
 
         # if there are no associated detection, create a new track for the detection
         for i, detection in enumerate(detections):
              if i not in associations.values():
-                print(f"Creating filter for detection: {detection}")
                 track_ = Track(KF_filter(detection, 1.0), self.track_id)
                 self.list_of_tracks.append(track_)
                 self.track_id += 1

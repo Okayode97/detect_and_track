@@ -305,6 +305,7 @@ class TestTracker:
         # --------- subsequent time steps [new detection] ---------
         new_set_of_detections: list[np.array] =[] 
 
+        # overlap between diagonal and inverted diagonal
         x = 35
         for i in range(25, 35, 1):
             detections = np.array([[i, 0, 10, 10], # vertical
@@ -321,8 +322,6 @@ class TestTracker:
             # iterate through each track and detection and assert that they are correctly associated
             for track, detection in zip(tracker_.list_of_tracks, detections):
                 np.testing.assert_allclose(track.filter.get_estimated_state()[0], detection, atol=0.1)
-        
-        assert False
 
 
 if __name__ == "__main__":
