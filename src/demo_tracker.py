@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 from tracker import Tracker
 import cv2
@@ -6,21 +7,25 @@ import cv2
 image_width, image_height = 640, 480
 num_boxes = 5
 box_size = 50
-colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
+colors = {"Red": (255, 0, 0), "Green": (0, 255, 0), "Blue": (0, 0, 255),
+          "Yellow": (255, 255, 0), "Cyan": (0, 255, 255), "Magneta": (255, 0, 255)}
 max_steps = 500  # Number of steps in the animation
 step_delay = 50  # Delay between steps in milliseconds
 
 # Initialize box positions and velocities
-np.random.seed(0)
+np.random.seed(42)
 positions = np.random.rand(num_boxes, 2) * [image_width - box_size, image_height - box_size]
 velocities = (np.random.rand(num_boxes, 2) - 0.5) * 10  # Random velocities
 
 
 # Function to update the positions of the bounding boxes
-def update_positions() -> np.ndarray:
+def update_positions(varying_speed: Optional[bool] = True) -> np.ndarray:
     bbox_detections: np.ndarray = np.empty((0, 4))
 
     for i in range(num_boxes):
+        if varying_speed:
+            velocities[i] += (np.random.rand(2) - 0.5) * 2  # Adjust this multiplier for more/less change in speed
+
         positions[i] += velocities[i]
 
         # Check for collision with walls and reverse velocity if necessary
@@ -40,24 +45,34 @@ def update_positions() -> np.ndarray:
 image = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
 bbox_tracker = Tracker()
+
 # Create animation
-for step in range(max_steps):
+for i, step in enumerate(range(max_steps)):
     # Clear the image
     image.fill(0)
 
-    # draw estimated state from previous time step before updating tracks
+    # draw estimated state from previous time step before updating
     for track in bbox_tracker.list_of_tracks:
         x, y, h, w = track.filter.get_estimated_state()[0]
         top_left = (int(x), int(y))
         bottom_right = (int(x + w), int(y + h))
-        cv2.rectangle(image, top_left, bottom_right, (255, 0, 255), 2)
+        cv2.rectangle(image, top_left, bottom_right, colors["Magneta"], 2)
 
     # Update positions
     bbox_detections = update_positions()
-    bbox_tracker.update_filters(bbox_detections)
+
+    # drop a random detection every 7 steps
+    if i in range(0, max_steps, 7):
+        dropped_detections = bbox_detections.copy()
+        dropped_index = np.random.randint(5)
+        print(f"Dropped bbox: {list(colors)[dropped_index]}")
+        dropped_detections =  np.delete(dropped_detections, dropped_index, axis=0)
+        bbox_tracker.update_filters(dropped_detections)
+    else:
+        bbox_tracker.update_filters(bbox_detections)
 
     # Draw bounding boxes
-    for bbox_detection_, color in zip(bbox_detections, colors):
+    for bbox_detection_, color in zip(bbox_detections, colors.values()):
         x, y, h, w = bbox_detection_
         top_left = (int(x), int(y))
         bottom_right = (int(x + w), int(y + h))
