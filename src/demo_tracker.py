@@ -45,6 +45,13 @@ for step in range(max_steps):
     # Clear the image
     image.fill(0)
 
+    # draw estimated state from previous time step before updating tracks
+    for track in bbox_tracker.list_of_tracks:
+        x, y, h, w = track.filter.get_estimated_state()[0]
+        top_left = (int(x), int(y))
+        bottom_right = (int(x + w), int(y + h))
+        cv2.rectangle(image, top_left, bottom_right, (255, 0, 255), 2)
+
     # Update positions
     bbox_detections = update_positions()
     bbox_tracker.update_filters(bbox_detections)
