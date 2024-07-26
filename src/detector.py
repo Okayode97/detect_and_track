@@ -4,23 +4,48 @@ Script to run detection on an image and return bounding boxes in format (xyhw) s
 import torch
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
 from torchvision.models.detection import SSDLite320_MobileNet_V3_Large_Weights
+from torchvision import transforms
 import time
 import cv2
 import numpy as np
 import logging
 
 
+IMAGE_DIM = 320
+
 list_of_captured_image = []
 ssd_model = ssdlite320_mobilenet_v3_large(weights=SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
 ssd_model.eval()
 
-def run_object_detection(frame: torch.tensor):
-    predictions = ssd_model(frame)
-    print(f"Prediction: {predictions}")
+# frame: batched or single images (B, C, H, W) with images rescaled to 0.0, 1.0
+def run_object_detection(frame: np.ndarray):
+    # transpose the image to color first
+    # do the image need to be resized to specific height & width?
+    frame = frame.transpose((2, 0, 1))
+    frame = frame / 255
+    frame = np.expand_dims(frame, axis=0)
+    torch_frame = torch.from_numpy(frame)
+
+    start_time = time.time()
+    predictions = ssd_model(torch_frame.float())
+    print(f"============== FPS: {1.0 /(time.time() - start_time)} ==============")
+
+    # dict with keys: box, scores, label
+    # box format??
+    return predictions
     pass
 
-def capture_image():
+preprocess = transforms.Compose([
+    transforms.ToTensor(),
+    transforms
+])
+
+def run_inference_on_live_image():
+
+    # instantiate video capture
     CAM = cv2.VideoCapture(0)
+
+    # set frame width, height & fps
 
     if CAM.isOpened():
         print("Camera is opened")
@@ -30,25 +55,13 @@ def capture_image():
     while CAM.isOpened():
         ret, frame = CAM.read()
 
+        run_object_detection(frame)
+        
         if not ret:
             print("Unable to read frame from camera...")
             break
 
-        cv2.imshow("Image", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('a'):
-            # list_of_captured_image.append(frame)
-            print("Captured image...")
-            color_first = np.moveaxis(frame, -1, 0)
-            color_first = np.expand_dims(color_first, 0)
-            print(color_first.shape)
-            torch_frame = torch.from_numpy(color_first)
-            print(torch_frame.shape)
-            run_object_detection(torch_frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
 
 
 if __name__ == "__main__":
-    capture_image()
+    run_inference_on_live_image()
