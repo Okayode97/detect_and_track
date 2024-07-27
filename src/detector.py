@@ -13,7 +13,7 @@ import logging
 
 IMAGE_DIM = 320
 
-list_of_captured_image = []
+# optimize for raspberry pi
 ssd_model = ssdlite320_mobilenet_v3_large(weights=SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
 ssd_model.eval()
 
@@ -31,9 +31,9 @@ def run_object_detection(frame: np.ndarray):
     print(f"============== FPS: {1.0 /(time.time() - start_time)} ==============")
 
     # dict with keys: box, scores, label
-    # box format??
-    return predictions
-    pass
+    # box format?? xyxy
+    return predictions[0]
+
 
 preprocess = transforms.Compose([
     transforms.ToTensor(),
@@ -55,10 +55,32 @@ def run_inference_on_live_image():
     while CAM.isOpened():
         ret, frame = CAM.read()
 
-        run_object_detection(frame)
-        
         if not ret:
             print("Unable to read frame from camera...")
+            break
+
+        predictions = run_object_detection(frame)
+        scores = predictions["scores"].detach().numpy()
+        bbox = predictions["boxes"].detach().numpy()
+        labels = predictions["labels"].detach().numpy()
+
+        # get the top 3 prediction
+        top_three_detection_scores: np.array = np.sort(scores, axis=0)[-3:]
+        top_three_bbox = []
+        top_three_labels = []
+
+        for score in top_three_detection_scores:
+            index = np.where(scores == score)[0][0]
+            top_three_bbox.append(bbox[index])
+            top_three_labels.append(labels[index])
+
+        for detection in top_three_bbox:
+            print(detection)
+            cv2.rectangle(frame, (int(detection[0]), int(detection[1])),
+                                 (int(detection[2]), int(detection[3])), (0, 255, 0), 1)
+
+        cv2.imshow("Image", frame)
+        if cv2.waitKey(1) == ord('q'):
             break
 
 
