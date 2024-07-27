@@ -134,7 +134,7 @@ class Tracker:
         self.list_of_tracks: list[Track] = []
         self.track_id: int = 0
 
-        self.track_max_staleness = 7
+        self.track_max_staleness = 3
         self.track_update_count_threshold = 20
     
     def associate_detections_to_tracks(self, detections: np.ndarray) -> dict[int, int]:
