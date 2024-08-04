@@ -10,6 +10,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 import numpy as np
+import cv2
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 from scipy.linalg import block_diag
@@ -133,8 +134,8 @@ class Tracker:
     def __init__(self):
         self.list_of_tracks: list[Track] = []
         self.track_id: int = 0
-
-        self.track_max_staleness = 3
+        self.dt = 1
+        self.track_max_staleness = 4
         self.track_update_count_threshold = 20
     
     def associate_detections_to_tracks(self, detections: np.ndarray) -> dict[int, int]:
@@ -195,7 +196,7 @@ class Tracker:
             if i not in associations.keys():
                 self.list_of_tracks[i].filter.update(np.array([]))
 
-                # increase staleness count for unassociated track, maxed at 7
+                # increase staleness count for unassociated track, maxed at traxk max staleness
                 self.list_of_tracks[i].filter.staleness_count+=1 
                 self.list_of_tracks[i].filter.staleness_count = min(self.track_max_staleness, self.list_of_tracks[i].filter.staleness_count)
 
@@ -207,6 +208,20 @@ class Tracker:
         # if there are no associated detection, create a new track for the detection
         for i, detection in enumerate(detections):
              if i not in associations.values():
-                track_ = Track(KF_filter(detection, 1.0), self.track_id)
+                track_ = Track(KF_filter(detection, self.dt), self.track_id)
                 self.list_of_tracks.append(track_)
                 self.track_id += 1
+
+    def set_filter_dt(self, dt):
+        self.dt = dt
+    
+    def draw_filters_box_estimates_onto_frame(self, frame: np.ndarray) -> np.ndarray:
+        frame_ = frame.copy()
+        for track in self.list_of_tracks:
+            x, y, h, w = track.filter.get_estimated_state()[0]
+            top_left = (int(x), int(y))
+            bottom_right = (int(x + w), int(y + h))
+            cv2.rectangle(frame_, top_left, bottom_right, (0, 255, 0), 2)
+            cv2.putText(frame_, str(track.filter_id), (top_left[0]+50, top_left[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        
+        return frame_

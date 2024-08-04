@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from tracker import Tracker
+from src.Tracker.tracker import Tracker
 import cv2
 
 # Parameters

@@ -13,7 +13,6 @@ import time
 import cv2
 import numpy as np
 import logging
-from label import coco_labels
 
 
 # optimize for raspberry pi
