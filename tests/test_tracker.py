@@ -1,8 +1,8 @@
 import cv2
 import pytest
 import numpy as np
-import random
-from tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre, Tracker, Track
+
+from src.tracker.tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre, Tracker, Track, get_box_iou
 
 
 class Demo_tracker:
@@ -365,6 +365,28 @@ class TestTracker:
 
         # assert on number of tracks
         assert len(tracker_.list_of_tracks) == 2
+
+    class TestIOU:
+
+        def test_returned_iou_is_one_for_the_same_two_boxes(self):
+            box = np.array([0, 0, 10, 10])
+            assert get_box_iou(box, box) == 1
+        
+        def test_returned_iou_is_zero_for_box_without_any_intersection(self):
+            box_1 = np.array([0, 0, 10, 10])
+            box_2 = np.array([11, 11, 10, 10])
+            assert get_box_iou(box_1, box_2) == 0
+        
+        def test_returned_iou_is_point_five_for_box_which_intersect_halfway(self):
+            box_1 = np.array([0, 0, 10, 10])
+            box_2 = np.array([5, 0, 10, 10])
+            assert get_box_iou(box_1, box_2) == 0.5
+
+        def test_get_box_iou_returns_expected_value(self):
+            box_1 = np.array([0, 0, 10, 10])
+            box_2 = np.array([6, 4, 10, 10])
+            assert get_box_iou(box_1, box_2) == 0.24
+        
 
 if __name__ == "__main__":
     Demo_tracker().filter_on_tracking_mouse_cursor()

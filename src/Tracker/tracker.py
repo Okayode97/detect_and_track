@@ -129,6 +129,58 @@ class Track:
 def get_bbox_centre(bbox: np.ndarray) -> np.ndarray:
     return np.array([bbox[0] + bbox[3]/2, bbox[1] + bbox[2]/2])
 
+def draw_filters_box_estimates_onto_frame(frame: np.ndarray, tracks: list[Track]) -> np.ndarray:
+    frame_ = frame.copy()
+    for track in tracks:
+        x, y, h, w = track.filter.get_estimated_state()[0]
+        top_left = (int(x), int(y))
+        bottom_right = (int(x + w), int(y + h))
+        cv2.rectangle(frame_, top_left, bottom_right, (0, 255, 0), 2)
+        cv2.putText(frame_, str(track.filter_id), (top_left[0]+50, top_left[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    
+    return frame_
+
+
+def get_box_iou(box_1: np.ndarray, box_2: np.ndarray):
+    """
+    Returns the intersection / union for two bounding boxs
+    input boxes in form of xyhw
+    """
+    # convert box from xyhw to xyxy
+    box_1_x1 = box_1[0]
+    box_1_y1 = box_1[1]
+    box_1_x2 = box_1[0] + box_1[2]
+    box_1_y2 = box_1[1] + box_1[3]
+
+    box_2_x1 = box_2[0]
+    box_2_y1 = box_2[1]
+    box_2_x2 = box_2[0] + box_2[2]
+    box_2_y2 = box_2[1] + box_2[3]
+
+    
+    # intersection
+    inter_x1_min = max(box_1_x1, box_2_x1)
+    inter_x2_max = min(box_1_x2, box_2_x2)
+
+    inter_y1_min = max(box_1_y1, box_2_y1)
+    inter_y2_max = min(box_1_y2, box_2_y2)
+
+    # intersection area
+    inter_width = max(0, inter_x2_max - inter_x1_min)
+    inter_height = max(0, inter_y2_max - inter_y1_min)
+    intersection_area = inter_width * inter_height
+
+    # Compute the area of both bounding boxes
+    area_box1 = (box_1[2] - box_1[0]) * (box_1[3] - box_1[1])
+    area_box2 = (box_2[2] - box_2[0]) * (box_2[3] - box_2[1])
+    
+    # Compute union area
+    union_area = area_box1 + area_box2 - intersection_area
+    
+    # Compute IoU
+    iou = intersection_area / union_area if union_area != 0 else 0
+    return iou
+
 
 class Tracker:
     def __init__(self):
@@ -153,15 +205,12 @@ class Tracker:
         for track in self.list_of_tracks:
             # use filter prediction for next time step if it's recieved updates 20, if less use filters estimation
             # TODO: Ideally use error in state co-variance matrix to determine use of prediction
-            track_bbox_prediction = track.filter.get_prediction()[0] if track.filter.update_count > self.track_update_count_threshold else track.filter.get_estimated_state()[0] 
-            filter_bbox_centre = get_bbox_centre(track_bbox_prediction)
+            track_bbox_prediction = track.filter.get_prediction()[0] if track.filter.update_count > self.track_update_count_threshold else track.filter.get_estimated_state()[0]
             filter_distances: np.array = np.array([])
 
             # get detections bbox centre
             for detection in detections:
-                # TODO: Ideally switch to using IOU
-                measurement_bbox_centre = get_bbox_centre(detection)
-                filter_distances = np.append(filter_distances, np.linalg.norm(measurement_bbox_centre - filter_bbox_centre))
+                filter_distances = np.append(filter_distances, get_box_iou(track_bbox_prediction, detection))
 
             # append the vectors together    
             cost_matrix = np.vstack([cost_matrix, filter_distances])
@@ -215,13 +264,3 @@ class Tracker:
     def set_filter_dt(self, dt):
         self.dt = dt
     
-    def draw_filters_box_estimates_onto_frame(self, frame: np.ndarray) -> np.ndarray:
-        frame_ = frame.copy()
-        for track in self.list_of_tracks:
-            x, y, h, w = track.filter.get_estimated_state()[0]
-            top_left = (int(x), int(y))
-            bottom_right = (int(x + w), int(y + h))
-            cv2.rectangle(frame_, top_left, bottom_right, (0, 255, 0), 2)
-            cv2.putText(frame_, str(track.filter_id), (top_left[0]+50, top_left[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-        
-        return frame_
