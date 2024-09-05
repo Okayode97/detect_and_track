@@ -1,9 +1,9 @@
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
 from torchvision.models.detection import SSDLite320_MobileNet_V3_Large_Weights
 
-from Tracker.tracker import Tracker
-from Detector.detector import run_object_detection, convert_box_format
-from Detector.label import coco_labels
+from tracker.tracker import Tracker, draw_filters_box_estimates_onto_frame
+from detector.detector import run_object_detection, convert_box_format
+from detector.label import coco_labels
 
 import cv2
 import numpy as np
@@ -57,7 +57,7 @@ def run_inference_on_live_image():
         tracker_.update_filters(detections)
    
        # draw estimated state from previous time step before updating
-        frame = tracker_.draw_filters_box_estimates_onto_frame(frame)
+        frame = draw_filters_box_estimates_onto_frame(frame, tracker_.list_of_tracks)
 
         cv2.imshow("Image", frame)
         if cv2.waitKey(1) == ord('q'):

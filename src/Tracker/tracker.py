@@ -129,6 +129,17 @@ class Track:
 def get_bbox_centre(bbox: np.ndarray) -> np.ndarray:
     return np.array([bbox[0] + bbox[3]/2, bbox[1] + bbox[2]/2])
 
+def draw_filters_box_estimates_onto_frame(frame: np.ndarray, tracks: list[Track]) -> np.ndarray:
+    frame_ = frame.copy()
+    for track in tracks:
+        x, y, h, w = track.filter.get_estimated_state()[0]
+        top_left = (int(x), int(y))
+        bottom_right = (int(x + w), int(y + h))
+        cv2.rectangle(frame_, top_left, bottom_right, (0, 255, 0), 2)
+        cv2.putText(frame_, str(track.filter_id), (top_left[0]+50, top_left[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    
+    return frame_
+
 
 class Tracker:
     def __init__(self):
@@ -215,13 +226,3 @@ class Tracker:
     def set_filter_dt(self, dt):
         self.dt = dt
     
-    def draw_filters_box_estimates_onto_frame(self, frame: np.ndarray) -> np.ndarray:
-        frame_ = frame.copy()
-        for track in self.list_of_tracks:
-            x, y, h, w = track.filter.get_estimated_state()[0]
-            top_left = (int(x), int(y))
-            bottom_right = (int(x + w), int(y + h))
-            cv2.rectangle(frame_, top_left, bottom_right, (0, 255, 0), 2)
-            cv2.putText(frame_, str(track.filter_id), (top_left[0]+50, top_left[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-        
-        return frame_
