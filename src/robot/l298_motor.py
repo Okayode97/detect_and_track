@@ -29,33 +29,29 @@ L298N Motor driver has a supply voltage of 5V to 35V and is capable of 2A contin
 VS power seperately. 
 """
 
+GPIO.setmode(GPIO.BCM)
 
-class L298N:
-    def __init__(self, dir_pin_1: int, dir_pin_2: int, dir_pin_3: int, dir_pin_4: int,
-                 motor_1_pwm: Optional[int] = None, motor_2_pwm: Optional[int] = None):
-        # input control for each motors to control direction
+class Motor:
+    def __init__(self, dir_pin_1: int, dir_pin_2: int, motor_pwm_pin: Optional[int] = None):
         self.dir_pin_1 = dir_pin_1
         self.dir_pin_2 = dir_pin_2
-        self.dir_pin_3 = dir_pin_3
-        self.dir_pin_4 = dir_pin_4
+        self.motor_pwm_pin = None
+        self.motor_pwm = None
 
-        # set GPIO pins
         GPIO.setup(self.dir_pin_1, GPIO.OUT)
         GPIO.setup(self.dir_pin_2, GPIO.OUT)
-        GPIO.setup(self.dir_pin_3, GPIO.OUT)
-        GPIO.setup(self.dir_pin_4, GPIO.OUT)
-        
 
-        # set pwm pin if not None
-        self.motor_1_pwm = None
-        if motor_1_pwm:
-            self.motor_1_pwm = motor_1_pwm
-            GPIO.setup(self.motor_1_pwm, GPIO.OUT)
-        
+        if motor_pwm_pin:
+            self.motor_pwm_pin = motor_pwm_pin
+            GPIO.setup(self.motor_pwm_pin, GPIO.OUT)
+            self.motor_pwm = GPIO.PWM(self.motor_1_pwm_pin, 100)
+            self.motor_pwm.start(50)
 
-        self.motor_2_pwm = None
-        if motor_2_pwm:
-            self.motor_2_pwm = motor_2_pwm  
-            GPIO.setup(self.motor_2_pwm, GPIO.OUT)
-              
-    
+
+    def set_direction(self, forward: bool):
+        GPIO.output(self.dir_pin_1, GPIO.HIGH if forward else GPIO.LOW)
+        GPIO.output(self.dir_pin_2, GPIO.LOW if forward else GPIO.HIGH)
+
+    def set_duty_cycle(self, duty_cycle: float):
+        self.motor_pwm.ChangeDutyCycle(duty_cycle)
+

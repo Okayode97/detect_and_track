@@ -30,6 +30,7 @@ Models selected for balance between accuracy and performance. I've excluded Fast
   - run time
   - model inference time, fps, target detections
   - tracker number of active tracks & id, dropped tracks
+- interface to control vehicle
 - functionality to convert track into information on how to move vehicle
 - experiment with YOLO look into how to 
 - experiment with deepsort
