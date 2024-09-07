@@ -19,19 +19,20 @@ from scipy.optimize import linear_sum_assignment
 
 class KF_filter:
     def __init__(self, detection: np.ndarray, dt: float):
+        self.dt = dt
         # state variables: x, x_hat, y, y_hat, h, h_hat,  w, w_hat
         # measurement: x, y, h, w
         self.filter = KalmanFilter(dim_x=8, dim_z=4)
 
         # define the state transition matrix
         # converts our state variable to the state variable in the next time step 
-        self.filter.F = np.array([[1, dt, 0, 0, 0, 0, 0, 0], # x
+        self.filter.F = np.array([[1, self.dt, 0, 0, 0, 0, 0, 0], # x
                                   [0, 1, 0, 0, 0, 0, 0, 0],  # x_hat
-                                  [0, 0, 1, dt, 0, 0, 0, 0], # y
+                                  [0, 0, 1, self.dt, 0, 0, 0, 0], # y
                                   [0, 0, 0, 1, 0, 0, 0, 0],  # y_hat
-                                  [0, 0, 0, 0, 1, dt, 0, 0], # h
+                                  [0, 0, 0, 0, 1, self.dt, 0, 0], # h
                                   [0, 0, 0, 0, 0, 1, 0, 0],  # h_hat
-                                  [0, 0, 0, 0, 0, 0, 1, dt], # w
+                                  [0, 0, 0, 0, 0, 0, 1, self.dt], # w
                                   [0, 0, 0, 0, 0, 0, 0, 1]   # w_hat
                                   ])
 
@@ -39,7 +40,7 @@ class KF_filter:
         # assume noise is discrete time wiener process and is constant for each time period.
         # Assumption allows user to define variance (how much we believe model changes between steps)
         # Another assumption is that the noise in x, y, h, w are independent so covariance between them shoild be zero
-        q = Q_discrete_white_noise(dim=2, dt=dt, var=1)
+        q = Q_discrete_white_noise(dim=2, dt=self.dt, var=1)
         self.filter.Q = block_diag(q, q, q, q)
 
         # define control function.
@@ -116,6 +117,9 @@ class KF_filter:
                                        predicted_state_variable[5],
                                        predicted_state_variable[7]])
         return (estimated_position, estimated_velocity)
+
+    def update_dt(self, dt: float):
+        self.dt = dt
 
 
 @dataclass
@@ -223,6 +227,7 @@ class Tracker:
                 self.list_of_tracks.append(track_)
                 self.track_id += 1
 
-    def set_filter_dt(self, dt):
-        self.dt = dt
+    def set_track_dt(self, dt: float):
+        for track in self.list_of_tracks:
+            track.filter.update_dt(dt)
     

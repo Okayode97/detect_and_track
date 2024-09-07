@@ -1,10 +1,8 @@
-from torchvision.models.detection import ssdlite320_mobilenet_v3_large
-from torchvision.models.detection import SSDLite320_MobileNet_V3_Large_Weights
-
 from tracker.tracker import Tracker, draw_filters_box_estimates_onto_frame
-from detector.detector import run_object_detection, convert_box_format
+from detector.detector import run_object_detection, convert_box_format, run_object_detection
 from detector.label import coco_labels
 
+import time
 import cv2
 import numpy as np
 
@@ -13,11 +11,12 @@ def run_inference_on_live_image():
     # instantiate video capture
     CAM = cv2.VideoCapture(0)
 
-    # optimize for raspberry pi
-    ssd_model = ssdlite320_mobilenet_v3_large(weights=SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
-    ssd_model.eval()
 
     tracker_ = Tracker()
+
+    start_time = None
+    dt = 1
+
 
     if CAM.isOpened():
         print("Camera is opened")
@@ -31,7 +30,7 @@ def run_inference_on_live_image():
             print("Unable to read frame from camera...")
             break
 
-        predictions = run_object_detection(frame, ssd_model)
+        predictions = run_object_detection(frame, "retina_resnet50")
         scores = predictions["scores"].detach().numpy()
         bbox = predictions["boxes"].detach().numpy()
         labels = predictions["labels"].detach().numpy()
@@ -54,8 +53,13 @@ def run_inference_on_live_image():
         else:
             detections = np.array([])
 
+        if start_time is not None:
+            dt = time.time() - start_time
         tracker_.update_filters(detections)
-   
+        tracker_.set_track_dt(dt)
+        start_time = time.time()
+
+
        # draw estimated state from previous time step before updating
         frame = draw_filters_box_estimates_onto_frame(frame, tracker_.list_of_tracks)
 
