@@ -55,3 +55,17 @@ class Motor:
     def set_duty_cycle(self, duty_cycle: float):
         self.motor_pwm.ChangeDutyCycle(duty_cycle)
 
+
+class Robot:
+
+    def __init__(self, motor_config: dict[str, int]):
+        self.fl_motor = Motor()
+        self.fr_motor = Motor()
+        self.rl_motor = Motor()
+        self.rr_motor = Motor()
+    
+    def set_heading(self):
+        pass
+
+    def set_speed(self):
+        pass
