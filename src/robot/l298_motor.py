@@ -1,6 +1,8 @@
 
 from typing import Optional
+from dataclasses import dataclass
 import RPi.GPIO as GPIO       
+
 
 """
 Reminding myself on L298N
@@ -26,7 +28,17 @@ L298N Motor driver has a supply voltage of 5V to 35V and is capable of 2A contin
 - 78M05 5V regulator, when enabled VSS receives voltage from VS and can supply 5V at 0.5A. When disabled
 5V needs to be supplied to VSS pin.
 - Suggested to keep regulator in place if VS supply is less than 12V, if over 12V supplied suggested to provide
-VS power seperately. 
+VS power seperately.
+
+
+Reading up on 4WD Robots with Omni wheels
+- Consideration on how to make sharper turns
+- possible need to set to individual motors to run at different speeds
+- Consideration on control system which determine write function call to make each time.
+
+- possible solution
+    - single control system which an input direction and speed to travel in
+        - input direction is broken down into components which then determine how to control each individual motors 
 """
 
 GPIO.setmode(GPIO.BCM)
@@ -56,16 +68,72 @@ class Motor:
         self.motor_pwm.ChangeDutyCycle(duty_cycle)
 
 
+@dataclass
+class MotorConfig:
+    fl_motor_dir_pin_1: int
+    fl_motor_dir_pin_2: int
+    fl_motor_pwm_pin: Optional[int]
+    fr_motor_dir_pin_1: int
+    fr_motor_dir_pin_2: int
+    fr_motor_pwm_pin: Optional[int]
+    rl_motor_dir_pin_1: int
+    rl_motor_dir_pin_2: int
+    rl_motor_pwm_pin: Optional[int]
+    rr_motor_dir_pin_1: int
+    rr_motor_dir_pin_2: int
+    rr_motor_pwm_pin: Optional[int]
+
+
 class Robot:
 
-    def __init__(self, motor_config: dict[str, int]):
-        self.fl_motor = Motor()
-        self.fr_motor = Motor()
-        self.rl_motor = Motor()
-        self.rr_motor = Motor()
+    def __init__(self, motor_config: MotorConfig):
+        self.fl_motor = Motor(motor_config.fl_motor_dir_pin_1, motor_config.fl_motor_dir_pin_2, motor_config.fl_motor_pwm_pin)
+        self.fr_motor = Motor(motor_config.fr_motor_dir_pin_1, motor_config.fr_motor_dir_pin_2, motor_config.fr_motor_pwm_pin)
+        self.rl_motor = Motor(motor_config.rl_motor_dir_pin_1, motor_config.rl_motor_dir_pin_2, motor_config.rl_motor_pwm_pin)
+        self.rr_motor = Motor(motor_config.rr_motor_dir_pin_1, motor_config.rr_motor_dir_pin_2, motor_config.rr_motor_pwm_pin)
     
-    def set_heading(self):
-        pass
 
-    def set_speed(self):
-        pass
+    def set_fl_speed_and_direction(self, direction: bool, speed: float):
+        self.fl_motor.set_direction(direction)
+        self.fl_motor.set_duty_cycle(speed)
+
+    def set_fr_speed_and_direction(self, direction: bool, speed: float):
+        self.fr_motor.set_direction(direction)
+        self.fr_motor.set_duty_cycle(speed)
+    
+    def set_rl_speed_and_direction(self, direction: bool, speed: float):
+        self.rl_motor.set_direction(direction)
+        self.rl_motor.set_duty_cycle(speed)
+    
+    def set_rr_speed_and_direction(self, direction: bool, speed: float):
+        self.rr_motor.set_direction(direction)
+        self.rr_motor.set_duty_cycle(speed)
+
+
+"""
+test
+FR
+- 26, 19, 13 (pwm pin)
+
+RR
+- 16 (pwn in), 20, 21
+
+FL
+- 4(PWM pin), 2, 3
+
+RL
+- 14(PWM pin), 15, 18
+"""
+
+MotorConfig(fl_motor_dir_pin_1=2, fl_motor_dir_pin_2=3, fl_motor_pwm_pin=4,
+            fr_motor_dir_pin_1=26, fr_motor_dir_pin_2=19, fr_motor_pwm_pin=13,
+            rl_motor_dir_pin_1=18, rl_motor_dir_pin_2=15, rl_motor_pwm_pin=14,
+            rr_motor_dir_pin_1=20, rr_motor_dir_pin_2=21, rr_motor_pwm_pin=16)
+
+test = Robot(config=MotorConfig)
+
+while True:
+    test.set_fl_speed_and_direction(True, 100)
+    test.set_fr_speed_and_direction(True, 100)
+    test.set_rl_speed_and_direction(True, 100)
+    test.set_rr_speed_and_direction(True, 100)
