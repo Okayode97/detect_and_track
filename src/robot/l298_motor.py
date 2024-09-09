@@ -56,7 +56,7 @@ class Motor:
         if motor_pwm_pin:
             self.motor_pwm_pin = motor_pwm_pin
             GPIO.setup(self.motor_pwm_pin, GPIO.OUT)
-            self.motor_pwm = GPIO.PWM(self.motor_1_pwm_pin, 100)
+            self.motor_pwm = GPIO.PWM(self.motor_pwm_pin, 100)
             self.motor_pwm.start(50)
 
 
@@ -73,12 +73,15 @@ class MotorConfig:
     fl_motor_dir_pin_1: int
     fl_motor_dir_pin_2: int
     fl_motor_pwm_pin: Optional[int]
+
     fr_motor_dir_pin_1: int
     fr_motor_dir_pin_2: int
     fr_motor_pwm_pin: Optional[int]
+
     rl_motor_dir_pin_1: int
     rl_motor_dir_pin_2: int
     rl_motor_pwm_pin: Optional[int]
+
     rr_motor_dir_pin_1: int
     rr_motor_dir_pin_2: int
     rr_motor_pwm_pin: Optional[int]
@@ -125,12 +128,12 @@ RL
 - 14(PWM pin), 15, 18
 """
 
-MotorConfig(fl_motor_dir_pin_1=2, fl_motor_dir_pin_2=3, fl_motor_pwm_pin=4,
+test_config = MotorConfig(fl_motor_dir_pin_1=2, fl_motor_dir_pin_2=3, fl_motor_pwm_pin=4,
             fr_motor_dir_pin_1=26, fr_motor_dir_pin_2=19, fr_motor_pwm_pin=13,
             rl_motor_dir_pin_1=18, rl_motor_dir_pin_2=15, rl_motor_pwm_pin=14,
             rr_motor_dir_pin_1=20, rr_motor_dir_pin_2=21, rr_motor_pwm_pin=16)
 
-test = Robot(config=MotorConfig)
+test = Robot(motor_config=test_config)
 
 while True:
     test.set_fl_speed_and_direction(True, 100)
