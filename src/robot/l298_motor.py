@@ -128,10 +128,21 @@ RL
 - 14(PWM pin), 15, 18
 """
 
-test_config = MotorConfig(fl_motor_dir_pin_1=2, fl_motor_dir_pin_2=3, fl_motor_pwm_pin=4,
-            fr_motor_dir_pin_1=26, fr_motor_dir_pin_2=19, fr_motor_pwm_pin=13,
-            rl_motor_dir_pin_1=18, rl_motor_dir_pin_2=15, rl_motor_pwm_pin=14,
-            rr_motor_dir_pin_1=20, rr_motor_dir_pin_2=21, rr_motor_pwm_pin=16)
+test_config = MotorConfig(fl_motor_dir_pin_1=2,
+                          fl_motor_dir_pin_2=3,
+                          fl_motor_pwm_pin=4,
+
+                          fr_motor_dir_pin_1=6,
+                          fr_motor_dir_pin_2=5,
+                          fr_motor_pwm_pin=13,
+
+                          rl_motor_dir_pin_1=18,
+                          rl_motor_dir_pin_2=15,
+                          rl_motor_pwm_pin=14,
+
+                          rr_motor_dir_pin_1=16,
+                          rr_motor_dir_pin_2=20,
+                          rr_motor_pwm_pin=19)
 
 test = Robot(motor_config=test_config)
 
