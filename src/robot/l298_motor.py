@@ -111,8 +111,54 @@ class Robot:
     def set_rr_speed_and_direction(self, direction: bool, speed: float):
         self.rr_motor.set_direction(direction)
         self.rr_motor.set_duty_cycle(speed)
+    
+    def move_forward(self, direction: bool, speed: float):
+        self.set_fl_speed_and_direction(direction, speed)
+        self.set_fr_speed_and_direction(direction, speed)
+        self.set_rl_speed_and_direction(direction, speed)
+        self.set_rr_speed_and_direction(direction, speed)
+    
+    def move_sideways(self, direction: bool, speed: float):
+        self.set_fl_speed_and_direction(direction, speed)
+        self.set_fr_speed_and_direction(not direction, speed)
+        self.set_rl_speed_and_direction(not direction, speed)
+        self.set_rr_speed_and_direction(direction, speed)
 
+    def move_diagonal_fr(self, direction: bool, speed: float):
+        self.set_fl_speed_and_direction(direction, speed)
+        self.set_fr_speed_and_direction(direction, 0)
+        self.set_rl_speed_and_direction(direction, 0)
+        self.set_rr_speed_and_direction(direction, speed)
+    
+    def move_diagonal_fl(self, direction: bool, speed: float):
+        self.set_fl_speed_and_direction(direction, 0)
+        self.set_fr_speed_and_direction(direction, speed)
+        self.set_rl_speed_and_direction(direction, speed)
+        self.set_rr_speed_and_direction(direction, 0)
 
+    def turn_around(self, direction: bool, speed: float):
+        self.set_fl_speed_and_direction(direction, speed)
+        self.set_fr_speed_and_direction(not direction, speed)
+        self.set_rl_speed_and_direction(direction, speed)
+        self.set_rr_speed_and_direction(not direction, speed)
+
+    def turn_rear_axis(self, direction: bool, speed: float):
+        self.set_fl_speed_and_direction(direction, speed)
+        self.set_fr_speed_and_direction(not direction, speed)
+        self.set_rl_speed_and_direction(direction, 0)
+        self.set_rr_speed_and_direction(direction, 0)
+
+    def concerning(self, direction: bool, speed: float):
+        if direction:
+            self.set_fl_speed_and_direction(direction, speed)
+            self.set_fr_speed_and_direction(direction, 0)
+            self.set_rl_speed_and_direction(direction, speed)
+            self.set_rr_speed_and_direction(direction, 0)
+        else:
+            self.set_fl_speed_and_direction(direction, 0)
+            self.set_fr_speed_and_direction(direction, speed)
+            self.set_rl_speed_and_direction(direction, 0)
+            self.set_rr_speed_and_direction(direction, speed)
 """
 test
 FR
@@ -128,26 +174,26 @@ RL
 - 14(PWM pin), 15, 18
 """
 
-test_config = MotorConfig(fl_motor_dir_pin_1=2,
-                          fl_motor_dir_pin_2=3,
-                          fl_motor_pwm_pin=4,
+test_config = MotorConfig(fl_motor_dir_pin_1=23,
+                          fl_motor_dir_pin_2=24,
+                          fl_motor_pwm_pin=18,
 
-                          fr_motor_dir_pin_1=6,
-                          fr_motor_dir_pin_2=5,
-                          fr_motor_pwm_pin=13,
+                          rr_motor_dir_pin_1=6,
+                          rr_motor_dir_pin_2=5,
+                          rr_motor_pwm_pin=13,
 
-                          rl_motor_dir_pin_1=18,
-                          rl_motor_dir_pin_2=15,
-                          rl_motor_pwm_pin=14,
+                          rl_motor_dir_pin_1=8,
+                          rl_motor_dir_pin_2=25,
+                          rl_motor_pwm_pin=12,
 
-                          rr_motor_dir_pin_1=16,
-                          rr_motor_dir_pin_2=20,
-                          rr_motor_pwm_pin=19)
+                          fr_motor_dir_pin_1=16,
+                          fr_motor_dir_pin_2=20,
+                          fr_motor_pwm_pin=19
+                          )
 
 test = Robot(motor_config=test_config)
 
 while True:
-    test.set_fl_speed_and_direction(True, 100)
-    test.set_fr_speed_and_direction(True, 100)
-    test.set_rl_speed_and_direction(True, 100)
-    test.set_rr_speed_and_direction(True, 100)
+    test.turn_rear_axis(True, 25)
+
+GPIO.cleanup()
