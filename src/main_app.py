@@ -6,17 +6,15 @@ import time
 import cv2
 import numpy as np
 
-def run_inference_on_live_image():
+def run_inference_on_live_image(headless: bool = True):
 
     # instantiate video capture
     CAM = cv2.VideoCapture(0)
-
 
     tracker_ = Tracker()
 
     start_time = None
     dt = 1
-
 
     if CAM.isOpened():
         print("Camera is opened")
@@ -63,8 +61,9 @@ def run_inference_on_live_image():
        # draw estimated state from previous time step before updating
         frame = draw_filters_box_estimates_onto_frame(frame, tracker_.list_of_tracks)
 
-        cv2.imshow("Image", frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
+        if not headless:
+            cv2.imshow("Image", frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
 
 run_inference_on_live_image()
