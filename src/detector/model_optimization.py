@@ -1,58 +1,67 @@
-# basic script to experiment with optimizing model and running it.
-import time
-
-import torch
-import numpy as np
-from torchvision import models, transforms
-
+"""
+Basic script to experiment with optimizing detection model to run at faster fps on a raspberry pi
+Workflow
+- Experiment with model optimizations methods
+- Run quantized model live and log FPS, time taken, Optionally log detections.
+"""
 import cv2
-from PIL import Image
+import os
+import time
+import json
 
-torch.backends.quantized.engine = 'qnnpack'
 
-cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 224)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 224)
-cap.set(cv2.CAP_PROP_FPS, 36)
+CAM = cv2.VideoCapture(0)
 
-preprocess = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+def run_object_detection(model, frame):
+    model(frame)
+    pass
 
-net = models.quantization.mobilenet_v2(pretrained=True, quantize=True)
-# jit model to take it from ~20fps to ~30fps
-net = torch.jit.script(net)
+def run_on_live_feed_and_log_performance(model, model_name: str):
 
-started = time.time()
-last_logged = time.time()
-frame_count = 0
+    log_filename = "logged_performance.json"
+    logged_json_data = {}
+    logged_fps = []
+    logged_elapsed_time = []
 
-with torch.no_grad():
-    while True:
-        # read frame
-        ret, image = cap.read()
-        if not ret:
-            raise RuntimeError("failed to read frame")
+    # load the data from the json file if it exists
+    # if it doesn't exist create log file
+    if os.path.exists(log_filename):
+        with open(log_filename) as f:
+            logged_json_data = json.load(f)
+    else:
+        with open(log_filename, "w") as f:
+            json.dump({}, f, indent=4)
 
-        # convert opencv output from BGR to RGB
-        image = image[:, :, [2, 1, 0]]
-        permuted = image
+    try:
+        while CAM.isOpened():
+            ret, frame = CAM.read()
 
-        # preprocess
-        input_tensor = preprocess(image)
+            if not ret:
+                print("Unable to read frame from camera...")
+                break
 
-        # create a mini-batch as expected by the model
-        input_batch = input_tensor.unsqueeze(0)
+            # run image through the model
+            start_time = time.time()
+            run_object_detection(model, frame)
+            end_time = time.time()
 
-        # run model
-        output = net(input_batch)
-        # do something with output ...
+            # log model performance
+            elapsed_time = end_time - start_time
+            fps = 1/elapsed_time
 
-        # log model performance
-        frame_count += 1
-        now = time.time()
-        if now - last_logged > 1:
-            print(f"{frame_count / (now-last_logged)} fps")
-            last_logged = now
-            frame_count = 0
+            print(f"Fps: {1/elapsed_time:.2f} | elapsed_time: {elapsed_time:.2f}")
+
+            logged_elapsed_time.append(elapsed_time)
+            logged_fps.append(fps)
+
+    except KeyboardInterrupt:
+
+        logged_json_data[model_name] = {"average_fps": sum(logged_fps)/len(logged_fps),
+                                        "average_elapsed_time": sum(logged_elapsed_time)/len(logged_elapsed_time)}
+
+        with open(log_filename, 'w') as f:
+            json.dump(logged_json_data, f, indent=4)
+    
+
+x = lambda x: x
+run_on_live_feed_and_log_performance(x, "dummy_model")
