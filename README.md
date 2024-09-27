@@ -18,6 +18,9 @@ Runs the object detector on incoming frames and filters incoming detection for s
   - FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1, Box Map (41.5), Params (38.2M), GFLOPs (152.24)
 
 Models selected for balance between accuracy and performance. I've excluded FasterRCNN_ResNet50_FPN from the above as though it is reported to perform well, it requires much higher number of operations and as a baseline was extermely slow.
+So far nothing seems to be able to run decently on the PI, Optimization methods that have been tried
+- quantizing + compiling the model
+with both method the pi still crashes and doesn't respond making working on it remotely very difficult, i've opted to run a model server on a different laptop to handle the running the model and simply return the detection back to the raspberry pi.
 
 
 ## Areas in need of improvements

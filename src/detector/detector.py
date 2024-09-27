@@ -11,7 +11,7 @@ from torchvision.ops import box_convert
 import time
 import cv2
 import numpy as np
-import logging
+from typing import Optional
 
 
 # ssdlite320 with mobilenet_v3_large_weights box MAP (21.3), Params (3.4M), GFLOPs (0.58)
@@ -31,39 +31,61 @@ retina_resnet50 = detection.retinanet_resnet50_fpn_v2(weights=detection.RetinaNe
 retina_resnet50.eval()
 
 
-# frame: batched or single images (B, C, H, W) with images rescaled to 0.0, 1.0
-def run_object_detection(frame: np.ndarray, model_name: str) -> dict[torch.Tensor]:
-    # transpose the image to color first
-    # do the image need to be resized to specific height & width?
+def preprocess_frame(frame: np.ndarray) -> torch.tensor:
+    # transpose the image to color first, reduce it's range and add batch dimension
     frame = frame.transpose((2, 0, 1))
     frame = frame / 255
     frame = np.expand_dims(frame, axis=0)
-    torch_frame = torch.from_numpy(frame)
+    return torch.from_numpy(frame).float()
 
-    start_time = time.time()
-    match model_name:
-        case "ssd_model":
-            predictions = ssd_model(torch_frame.float())
-        
-        case "fasterrcnn_mobilenet":
-            predictions = fasterrcnn_mobilenet(torch_frame.float())
-        
-        case "fcos_resnet50":
-            predictions = fcos_resnet50(torch_frame.float())
 
-        case "retina_resnet50":
-            predictions = retina_resnet50(torch_frame.float())
-            pass
+def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
+                           target_label_idx: Optional[int]=1) -> tuple[list]:
+    
+    # select n predictions with highest score
+    scores = predictions["scores"].detach().numpy()
+    bboxes = predictions["boxes"].detach().numpy()
+    labels = predictions["labels"].detach().numpy()
 
-        case _:
-            print("Invalid model....")
-            return -1
+    # selected detections
+    top_n_labels = []
+    top_n_bboxes = []
+    top_n_scores = []
 
-    print(f"============== FPS: {1.0 /(time.time() - start_time)} ==============")
+    # get top scores
+    top_detection_scores = np.sort(scores, axis=0)[-n_detection:]
 
-    # dict with keys: box, scores, label
-    # single batch
+    # iterate through top detection & filter for target label
+    for score in top_detection_scores:
+        idx = np.where(scores == score)[0][0]
+
+        if labels[idx] == target_label_idx:
+            top_n_bboxes.append(bboxes[idx])
+            top_n_scores.append(scores[idx])
+            top_n_labels.append(labels[idx])
+
+    return (top_n_scores, top_n_bboxes, top_n_labels)
+
+
+def run_object_detection(model, frame: torch.Tensor) -> dict[torch.Tensor]:
+    """
+    Function runs object detection with single batched frame passed to the model.
+    return is model's prediction
+    """
+    model.eval()
+    with torch.no_grad:
+        predictions = model(frame)
+
     return predictions[0]
+
+
+def run_full_detection_pipeline(model, frame, n_detection):
+    # preprocess the frame before passing it to the model
+    torch_frame = preprocess_frame(frame)
+
+    model_predictions = run_object_detection(model, torch_frame)
+
+    return select_top_n_detection(model_predictions, n_detection)
 
 
 # returned box in format of xyxy, tracker requires box in format xyhw
