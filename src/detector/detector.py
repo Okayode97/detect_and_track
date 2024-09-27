@@ -8,8 +8,6 @@ possible TODO:
 import torch
 from torchvision.models import detection
 from torchvision.ops import box_convert
-import time
-import cv2
 import numpy as np
 from typing import Optional
 
