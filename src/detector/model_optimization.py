@@ -19,10 +19,16 @@ from torchvision.models import detection
 
 CAM = cv2.VideoCapture(0)
 
-ssd_model = detection.ssdlite320_mobilenet_v3_large(weights=detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
-ssd_model.eval()
+# load, compile and save the model
+# ssd_model = detection.ssdlite320_mobilenet_v3_large(weights=detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
+# ssd_model.eval()
 
-optimized_model = torch.compile(ssd_model)
+# optimized_model = torch.compile(ssd_model)
+# torch.save(optimized_model, "optimized_ssdlite320_mobilenet.pt")
+
+
+# load the saved model
+optimized_model = torch.load("optimized_ssdlite320_mobilenet.pt", weights_only=False)
 
 
 def run_object_detection(model, frame) -> dict:
@@ -35,6 +41,44 @@ def run_object_detection(model, frame) -> dict:
     prediction = model(torch_frame)
 
     return prediction[0]
+
+
+def run_on_single_frame_and_log_performance(model, model_name:str):
+    log_filename = "logged_performance.json"
+    logged_json_data = {}
+
+    # load the data from the json file if it exists
+    # if it doesn't exist create log file
+    if os.path.exists(log_filename):
+        with open(log_filename) as f:
+            logged_json_data = json.load(f)
+    else:
+        with open(log_filename, "w") as f:
+            json.dump({}, f, indent=4)
+    
+    if CAM.isOpened():
+        ret, frame = CAM.read()
+
+        # run image through the model
+        start_time = time.time()
+        predictions = run_object_detection(model, frame)
+        end_time = time.time()
+
+        # print out top three predictions
+        scores = predictions["scores"].detach().numpy()
+        labels = predictions["labels"].detach().numpy()
+
+        top_three_detection_scores = np.sort(scores, axis=0)[-3:]
+        for score in top_three_detection_scores:
+            index = np.where(scores == score)[0][0]
+
+            print(f"Detection: {coco_labels[labels[index]]}, Score: {score}")
+
+        # log model performance
+        elapsed_time = end_time - start_time
+        fps = 1/elapsed_time
+
+        print(f"Fps: {1/elapsed_time:.2f} | elapsed_time: {elapsed_time:.2f}")
 
 
 def run_on_live_feed_and_log_performance(model, model_name: str):
@@ -56,10 +100,6 @@ def run_on_live_feed_and_log_performance(model, model_name: str):
     try:
         while CAM.isOpened():
             ret, frame = CAM.read()
-
-            if not ret:
-                print("Unable to read frame from camera...")
-                break
 
             # run image through the model
             start_time = time.time()
@@ -94,4 +134,5 @@ def run_on_live_feed_and_log_performance(model, model_name: str):
             json.dump(logged_json_data, f, indent=4)
     
 
-run_on_live_feed_and_log_performance(ssd_model, "ssd_model")
+# run_on_live_feed_and_log_performance(optimized_model, "compiled_ssd_model")
+run_on_single_frame_and_log_performance(optimized_model, "compiled_ssd_model")
