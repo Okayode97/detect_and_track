@@ -3,18 +3,39 @@ Basic script to experiment with optimizing detection model to run at faster fps 
 Workflow
 - Experiment with model optimizations methods
 - Run quantized model live and log FPS, time taken, Optionally log detections.
+    - further update to log metrics on Raspberry pi utilization
 """
-import cv2
 import os
 import time
 import json
 
+from label import coco_labels
+
+import cv2
+import numpy as np
+import torch
+from torchvision.models import detection
+
 
 CAM = cv2.VideoCapture(0)
 
-def run_object_detection(model, frame):
-    model(frame)
-    pass
+ssd_model = detection.ssdlite320_mobilenet_v3_large(weights=detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
+ssd_model.eval()
+
+optimized_model = torch.compile(ssd_model)
+
+
+def run_object_detection(model, frame) -> dict:
+    # transpose the image to color first, reduce range to 0 - 1 and add batch dimension.
+    frame = frame.transpose((2, 0, 1))
+    frame = frame / 255
+    frame = np.expand_dims(frame, axis=0)
+    torch_frame = torch.from_numpy(frame).float()
+
+    prediction = model(torch_frame)
+
+    return prediction[0]
+
 
 def run_on_live_feed_and_log_performance(model, model_name: str):
 
@@ -42,8 +63,18 @@ def run_on_live_feed_and_log_performance(model, model_name: str):
 
             # run image through the model
             start_time = time.time()
-            run_object_detection(model, frame)
+            predictions = run_object_detection(model, frame)
             end_time = time.time()
+
+            # print out top three predictions
+            scores = predictions["scores"].detach().numpy()
+            labels = predictions["labels"].detach().numpy()
+
+            top_three_detection_scores = np.sort(scores, axis=0)[-3:]
+            for score in top_three_detection_scores:
+                index = np.where(scores == score)[0][0]
+
+                print(f"Detection: {coco_labels[labels[index]]}, Score: {score}")
 
             # log model performance
             elapsed_time = end_time - start_time
@@ -54,7 +85,7 @@ def run_on_live_feed_and_log_performance(model, model_name: str):
             logged_elapsed_time.append(elapsed_time)
             logged_fps.append(fps)
 
-    except KeyboardInterrupt:
+    except Exception:
 
         logged_json_data[model_name] = {"average_fps": sum(logged_fps)/len(logged_fps),
                                         "average_elapsed_time": sum(logged_elapsed_time)/len(logged_elapsed_time)}
@@ -63,5 +94,4 @@ def run_on_live_feed_and_log_performance(model, model_name: str):
             json.dump(logged_json_data, f, indent=4)
     
 
-x = lambda x: x
-run_on_live_feed_and_log_performance(x, "dummy_model")
+run_on_live_feed_and_log_performance(ssd_model, "ssd_model")

@@ -17,8 +17,8 @@ Runs the object detector on incoming frames and filters incoming detection for s
   - FCOS_ResNet50_FPN_Weights, Box Map (39.2), Params (39.2M), GFLOPs (128.21)
   - FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1, Box Map (41.5), Params (38.2M), GFLOPs (152.24)
 
-
 Models selected for balance between accuracy and performance. I've excluded FasterRCNN_ResNet50_FPN from the above as though it is reported to perform well, it requires much higher number of operations and as a baseline was extermely slow.
+
 
 ## Areas in need of improvements
 - Target re-identification. Target track are occasionally dropped and re-identified with a different id. It would be ideal for the tracker to maintain consistent id for given target (deepsort resolve this...) 
