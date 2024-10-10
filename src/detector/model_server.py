@@ -5,13 +5,28 @@ Approach to model server
 - Server runs object detection using selected model, results from server is then sent back to client
 - client recieves 
 """
-from detector import run_full_detection_pipeline, fcos_resnet50
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+import cv2
+import numpy as np
 
+def decode_bytes_to_img(bytes):
+    img = np.asarray(bytearray(bytes), dtype="uint8")
+    decoded_img = cv2.imdecode(img, cv2.IMREAD_COLOR)
+    return decoded_img
 
 app = FastAPI()
 
-
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"msg": "hello world"}
+
+@app.post("/images")
+async def get_model_prediction(request: Request):
+    data = await request.body()
+    img = decode_bytes_to_img(data)
+    # Run model using recieved image and return the detections
+    return {"detections": "hello"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
