@@ -11,6 +11,7 @@ from torchvision.models import detection
 from torchvision.ops import box_convert
 import numpy as np
 from typing import Optional
+from time import time
 
 
 # ssdlite320 with mobilenet_v3_large_weights box MAP (21.3), Params (3.4M), GFLOPs (0.58)
@@ -39,7 +40,7 @@ def preprocess_frame(frame: np.ndarray) -> torch.tensor:
 
 
 def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
-                           target_label_idx: Optional[int]=1) -> tuple[list]:
+                           target_label_idx: Optional[int]=1) -> list[dict]:
     
     # select n predictions with highest score
     scores = predictions["scores"].detach().numpy()
@@ -47,9 +48,7 @@ def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
     labels = predictions["labels"].detach().numpy()
 
     # selected detections
-    top_n_labels = []
-    top_n_bboxes = []
-    top_n_scores = []
+    selected_detections = []
 
     # get top scores
     top_detection_scores = np.sort(scores, axis=0)[-n_detection:]
@@ -58,12 +57,14 @@ def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
     for score in top_detection_scores:
         idx = np.where(scores == score)[0][0]
 
+        data_dict = {}
         if labels[idx] == target_label_idx:
-            top_n_bboxes.append(bboxes[idx])
-            top_n_scores.append(scores[idx])
-            top_n_labels.append(labels[idx])
+            data_dict["score"] = scores[idx]
+            data_dict["label"] = labels[idx]
+            data_dict["boxes"] = bboxes[idx]
+            selected_detections.append(data_dict)
 
-    return (top_n_scores, top_n_bboxes, top_n_labels)
+    return selected_detections
 
 
 def run_object_detection(model: Module, frame: torch.Tensor) -> dict[torch.Tensor]:
@@ -78,13 +79,24 @@ def run_object_detection(model: Module, frame: torch.Tensor) -> dict[torch.Tenso
     return predictions[0]
 
 
-def run_full_detection(model: Module, frame: np.ndarray, n_detection: int) -> tuple[list]:
+def run_full_detection(model: Module, frame: np.ndarray, n_detection: int) -> dict:
     # preprocess the frame before passing it to the model
     torch_frame = preprocess_frame(frame)
 
+    start_time = time()
     model_predictions = run_object_detection(model, torch_frame)
+    end_time = time()
 
-    return select_top_n_detection(model_predictions, n_detection)
+    log_metrics = {"elasped_time": end_time - start_time, "fps": 1/(end_time-start_time)}
+
+    selected_detections = select_top_n_detection(model_predictions, n_detection)
+
+    # merge selected detections with logged_metrics
+    results = {f"detection_{idx}": dict for idx, dict in enumerate(selected_detections)}
+    
+    # update selected detections with log metrics
+    results.update(log_metrics)
+    return results
 
 
 # returned box in format of xyxy, tracker requires box in format xyhw
