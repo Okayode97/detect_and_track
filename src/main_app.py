@@ -1,5 +1,5 @@
 from tracker.tracker import Tracker, draw_filters_box_estimates_onto_frame
-from detector.detector import convert_box_format, run_full_detection_pipeline, fcos_resnet50
+from detector.detector import convert_box_format, run_full_detection, fcos_resnet50
 from detector.label import coco_labels
 
 import time
@@ -28,7 +28,7 @@ def run_inference_on_live_image(headless: bool = True):
             print("Unable to read frame from camera...")
             break
         
-        detections = run_full_detection_pipeline(fcos_resnet50, frame, 5)
+        detections = run_full_detection(fcos_resnet50, frame, 5)
         _, top_bbox, _ = detections
 
         if len(top_bbox) != 0:

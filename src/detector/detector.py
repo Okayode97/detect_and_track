@@ -6,6 +6,7 @@ possible TODO:
 - Implement interface to allow for dynamic target selection
 """
 import torch
+from torch.nn import Module
 from torchvision.models import detection
 from torchvision.ops import box_convert
 import numpy as np
@@ -65,7 +66,7 @@ def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
     return (top_n_scores, top_n_bboxes, top_n_labels)
 
 
-def run_object_detection(model, frame: torch.Tensor) -> dict[torch.Tensor]:
+def run_object_detection(model: Module, frame: torch.Tensor) -> dict[torch.Tensor]:
     """
     Function runs object detection with single batched frame passed to the model.
     return is model's prediction
@@ -77,7 +78,7 @@ def run_object_detection(model, frame: torch.Tensor) -> dict[torch.Tensor]:
     return predictions[0]
 
 
-def run_full_detection_pipeline(model, frame, n_detection):
+def run_full_detection(model: Module, frame: np.ndarray, n_detection: int) -> tuple[list]:
     # preprocess the frame before passing it to the model
     torch_frame = preprocess_frame(frame)
 

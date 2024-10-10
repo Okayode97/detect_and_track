@@ -8,13 +8,15 @@ Approach to model server
 from fastapi import FastAPI, Request
 import cv2
 import numpy as np
+from src.detector.detector import retina_resnet50, run_full_detection
+
+app = FastAPI()
 
 def decode_bytes_to_img(bytes):
     img = np.asarray(bytearray(bytes), dtype="uint8")
     decoded_img = cv2.imdecode(img, cv2.IMREAD_COLOR)
     return decoded_img
 
-app = FastAPI()
 
 @app.get("/")
 async def root():
@@ -24,8 +26,9 @@ async def root():
 async def get_model_prediction(request: Request):
     data = await request.body()
     img = decode_bytes_to_img(data)
-    # Run model using recieved image and return the detections
-    return {"detections": "hello"}
+    
+    detections = run_full_detection(retina_resnet50, img, 5)
+    return {"detections": detections}
 
 if __name__ == "__main__":
     import uvicorn
