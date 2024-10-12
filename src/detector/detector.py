@@ -59,9 +59,9 @@ def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
 
         data_dict = {}
         if labels[idx] == target_label_idx:
-            data_dict["score"] = scores[idx]
-            data_dict["label"] = labels[idx]
-            data_dict["boxes"] = bboxes[idx]
+            data_dict["score"] = scores[idx].tolist()
+            data_dict["label"] = labels[idx].tolist()
+            data_dict["boxes"] = bboxes[idx].tolist()
             selected_detections.append(data_dict)
 
     return selected_detections
@@ -73,8 +73,8 @@ def run_object_detection(model: Module, frame: torch.Tensor) -> dict[torch.Tenso
     return is model's prediction
     """
     model.eval()
-    with torch.no_grad:
-        predictions = model(frame)
+    # with torch.no_grad:
+    predictions = model(frame)
 
     return predictions[0]
 

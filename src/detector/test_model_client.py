@@ -24,13 +24,19 @@ def decode_bytes_to_img(bytes: bytes) -> np.ndarray:
 
 def stream_camerafeed_to_server(server_url):
 
+    CAM = cv2.VideoCapture(1)
     # camera broken on own laptop :(
-    while True:
+    while CAM.isOpened():
+
+        ret, frame = CAM.read()
+
+        if not ret:
+            print("Unable to read frame from camera..")
+            break
 
         # Prepare the POST request to send the image
         try:
-            img = np.ones((4, 4, 3))
-            encoded_bytes = encoded_img_to_bytes(img)
+            encoded_bytes = encoded_img_to_bytes(frame)
             response = requests.post(server_url, encoded_bytes)
             if response.status_code == 200:
                 print(f"Frame sent successfully | Returned content: {response.content}")

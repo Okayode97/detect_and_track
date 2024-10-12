@@ -8,7 +8,7 @@ Approach to model server
 from fastapi import FastAPI, Request
 import cv2
 import numpy as np
-from detector import retina_resnet50, run_full_detection
+from detector import retina_resnet50, ssd_model, run_full_detection
 
 app = FastAPI()
 
@@ -25,8 +25,8 @@ async def root():
 @app.post("/images")
 async def get_model_prediction(request: Request):
     data = await request.body()
-    img = decode_bytes_to_img(data)  
-    detections = run_full_detection(retina_resnet50, img, 5)
+    img = decode_bytes_to_img(data)
+    detections = run_full_detection(ssd_model, img, 5)
     return {"detections": detections}
 
 if __name__ == "__main__":
