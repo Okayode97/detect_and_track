@@ -18,9 +18,6 @@ def decode_bytes_to_img(bytes):
     return decoded_img
 
 
-@app.get("/")
-async def root():
-    return {"msg": "hello world"}
 
 @app.post("/images")
 async def get_model_prediction(request: Request):
