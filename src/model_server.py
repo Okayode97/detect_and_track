@@ -8,7 +8,7 @@ Approach to model server
 from fastapi import FastAPI, Request
 import cv2
 import numpy as np
-from detector import retina_resnet50, ssd_model, run_full_detection
+from src.detector.detector import retina_resnet50, ssd_model, run_full_detection
 
 app = FastAPI()
 
