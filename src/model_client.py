@@ -30,9 +30,12 @@ def stream_camerafeed_to_server(server_url):
         # Prepare the POST request to send the image
         try:
             encoded_bytes = encoded_img_to_bytes(frame)
+            start_time = time.time()
             response = requests.post(server_url, encoded_bytes)
+            end_time = time.time()
             if response.status_code == 200:
-                print(f"Frame sent successfully | Returned content: {response.content}")
+                results = response.json()
+                print(f"Frame sent successfully | Returned content: {results}")
             else:
                 print(f"Error: Server responded with status code {response.status_code}")
         except Exception as e:
