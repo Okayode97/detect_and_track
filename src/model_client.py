@@ -16,16 +16,9 @@ def encoded_img_to_bytes(img: np.ndarray) -> bytes:
     return encoded_bytes
 
 
-def decode_bytes_to_img(bytes: bytes) -> np.ndarray:
-    img = np.asarray(bytearray(bytes), dtype="uint8")
-    decoded_img = cv2.imdecode(img, cv2.IMREAD_COLOR)
-    return decoded_img
-
-
 def stream_camerafeed_to_server(server_url):
 
-    CAM = cv2.VideoCapture(1)
-    # camera broken on own laptop :(
+    CAM = cv2.VideoCapture(0)
     while CAM.isOpened():
 
         ret, frame = CAM.read()
@@ -49,7 +42,7 @@ def stream_camerafeed_to_server(server_url):
         # You can add a sleep time if you want to slow down the frame rate
         time.sleep(0.1)  # 100ms delay between frames
 
-
-stream_camerafeed_to_server("http://127.0.0.1:8000/images")
+server_url = "127.0.0.1"
+stream_camerafeed_to_server(f"http://{server_url}:8000/images")
 
 
