@@ -27,7 +27,7 @@ async def get_model_prediction(request: Request):
     data = await request.body()
     img = decode_bytes_to_img(data)
     detections = run_full_detection(ssd_model, img, 5)
-    return {"detections": detections}
+    return detections
 
 if __name__ == "__main__":
     import uvicorn

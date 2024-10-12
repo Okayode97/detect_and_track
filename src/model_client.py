@@ -16,7 +16,7 @@ def encoded_img_to_bytes(img: np.ndarray) -> bytes:
     return encoded_bytes
 
 
-def stream_camerafeed_to_server(server_url):
+def run_app(server_url):
 
     CAM = cv2.VideoCapture(0)
     while CAM.isOpened():
@@ -35,17 +35,16 @@ def stream_camerafeed_to_server(server_url):
             end_time = time.time()
             if response.status_code == 200:
                 results = response.json()
-                print(f"Frame sent successfully | Returned content: {results}")
+                results["metrics"]["server_latency"] = end_time - start_time
+                print(results)
             else:
                 print(f"Error: Server responded with status code {response.status_code}")
         except Exception as e:
             print(f"Error sending image to server: {e}")
             break
 
-        # You can add a sleep time if you want to slow down the frame rate
-        time.sleep(0.1)  # 100ms delay between frames
 
 server_url = "127.0.0.1"
-stream_camerafeed_to_server(f"http://{server_url}:8000/images")
+run_app(f"http://{server_url}:8000/images")
 
 

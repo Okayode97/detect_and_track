@@ -96,10 +96,10 @@ def run_full_detection(model: Module, frame: np.ndarray, n_detection: int) -> di
 
     if len(selected_detections) > 0:
         detections = {f"detection_{idx}": dict for idx, dict in enumerate(selected_detections)}
-        results = {"detections": detection}
+        results = {"detections": detections}
 
     # update selected detections with log metrics
-    results.update(log_metrics)
+    results.update({"metrics": log_metrics})
     return results
 
 
