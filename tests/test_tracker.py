@@ -1,8 +1,7 @@
 import cv2
 import pytest
 import numpy as np
-import random
-from tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre, Tracker, Track
+from src.tracker.tracker import KF_filter, KalmanFilter, Q_discrete_white_noise, get_bbox_centre, Tracker, Track
 
 
 class Demo_tracker:

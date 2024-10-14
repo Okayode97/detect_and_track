@@ -45,6 +45,8 @@ Issues/Gotchas
 
 ## Just in time compilation (JIT)
 
+
+
 ## Resources
 - [Model Quantization 1: Basic Concepts](https://medium.com/@florian_algo/model-quantization-1-basic-concepts-860547ec6aa9#:~:text=Quantization%20of%20deep%20learning%20models,training%2C%20finetuning%20and%20inference%20stages.)
 - [Pytorch's Quantization Recipe](https://pytorch.org/tutorials/recipes/quantization.html)
