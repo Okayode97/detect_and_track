@@ -10,7 +10,7 @@ def incremental_average(current_average: float, new_value: float, count: int) ->
     # calculate average if less than two entries
     return sum([current_average, new_value]) / (count + 1)
 
-def log_results(data: dict, filename: str, model_name: str):
+def log_results(data: dict, filename: str, model_name: str) -> None:
 
     # if the file exists load the data, else keep empty dict
     loaded_data = {}

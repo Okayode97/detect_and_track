@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 import cv2
 import numpy as np
 from detector.detector import retina_resnet50, ssd_model, run_full_detection
+from detector.logging import log_results
 
 app = FastAPI()
 
@@ -24,6 +25,7 @@ async def get_model_prediction(request: Request):
     data = await request.body()
     img = decode_bytes_to_img(data)
     detections = run_full_detection(ssd_model, img, 5)
+    log_results(detections["metrics"], "baseline", "ssd_model")
     return detections
 
 if __name__ == "__main__":
