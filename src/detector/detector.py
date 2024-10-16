@@ -61,7 +61,7 @@ def select_top_n_detection(predictions: dict[torch.Tensor], n_detection: int,
         if labels[idx] == target_label_idx:
             data_dict["score"] = scores[idx].tolist()
             data_dict["label"] = labels[idx].tolist()
-            data_dict["boxes"] = bboxes[idx].tolist()
+            data_dict["box"] = bboxes[idx].tolist()
             selected_detections.append(data_dict)
 
     return selected_detections
