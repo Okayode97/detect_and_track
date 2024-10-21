@@ -1,15 +1,14 @@
 from tracker.tracker import Tracker, draw_filters_box_estimates_onto_frame
-from detector.detector import convert_box_format, run_full_detection, fcos_resnet50
-from detector.label import coco_labels
+from detector.detector import convert_box_format, run_full_detection, ssd_model
 
 import time
 import cv2
 import numpy as np
 
-def run_inference_on_live_image(headless: bool = True):
+def run_inference_on_live_image(headless: bool = False):
 
     # instantiate video capture
-    CAM = cv2.VideoCapture(0)
+    CAM = cv2.VideoCapture(1)
 
     tracker_ = Tracker()
 
@@ -28,11 +27,11 @@ def run_inference_on_live_image(headless: bool = True):
             print("Unable to read frame from camera...")
             break
         
-        detections = run_full_detection(fcos_resnet50, frame, 5)
-        _, top_bbox, _ = detections
+        detections = run_full_detection(ssd_model, frame, 2)
+        top_bbox = [detections["detections"][key]["boxes"] for key in detections["detections"].keys()] 
 
         if len(top_bbox) != 0:
-            detections = np.vstack([convert_box_format(bbox) for bbox in top_bbox])
+            detections = np.vstack([convert_box_format(np.array(bbox)) for bbox in top_bbox])
         else:
             detections = np.array([])
 
