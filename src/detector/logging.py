@@ -1,6 +1,8 @@
 from typing import Optional
 import os
 import json
+from detector.label import coco_labels
+import cv2
 
 def incremental_average(current_average: float, new_value: float, count: int) -> float:
     # https://math.stackexchange.com/questions/106700/incremental-averaging
@@ -38,3 +40,18 @@ def log_results(data: dict, filename: str, model_name: str) -> None:
     # write loaded_data to file
     with open(f"{filename}_log.json", "w") as f:
         json.dump(loaded_data, f, indent=4)
+
+
+# function to log frames & detections to file
+# quality of detections would be assessed after running the server
+def log_detections(frame, detections, filename):
+    # iterate through dict
+    for key in detections.keys():
+        detection = detections[key]["box"]
+        frame = cv2.rectangle(frame, (int(detection[0]), int(detection[1])), (int(detection[2]), int(detection[3])),
+                              (0, 255, 0), 2)
+        frame = cv2.putText(frame, f'Label: {coco_labels[detections[key]["label"]]}, Score: {detections[key]["score"]:.2f}',
+                            (int(detection[0]), int(detection[1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 
+                            1, (0, 255, 0), 2, cv2.LINE_AA)
+    
+    cv2.imwrite(filename, frame)
