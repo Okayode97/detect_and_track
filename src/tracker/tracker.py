@@ -215,13 +215,14 @@ class Tracker:
             new_tracks.append(track)
     
     self.list_of_tracks = new_tracks
-    """""
+    
 
     # Create new tracks for unassociated detections
     for i, detection in enumerate(detections):
         if i not in associations.values():
             self.list_of_tracks.append(Track(KF_filter(detection, self.dt), self.track_id))
             self.track_id += 1
+""""""
 
         
         # associate detections to tracks
