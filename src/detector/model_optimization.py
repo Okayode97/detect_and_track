@@ -1,142 +1,161 @@
-"""
-Basic script to experiment with optimizing detection model to run at faster fps on a raspberry pi
-Workflow
-- Experiment with model optimizations methods
-- Run quantized model live and log FPS, time taken, Optionally log detections.
-    - further update to log metrics on Raspberry pi utilization
+""""""
+# torchvision.transforms for Image Preprocessing
+# torch.quantization.quantize_dynamic() reducdes model size
+# Used a single def fr log_performance
+"""""""
 
-Nothing seems to work...
-"""
+
+
 import os
 import time
 import json
-
-from label import coco_labels
-
 import cv2
 import numpy as np
 import torch
 import torch.nn as nn
+import torchvision.transforms as T
 from torchvision.models import detection
+import psutil  # For Raspberry Pi resource monitoring
+
+from label import coco_labels
 
 
 CAM = cv2.VideoCapture(0)
+transform = T.Compose([
+    T.ToTensor()  # Converts to Tensor and normalizes between [0, 1]
+])
 
 
 def run_object_detection(model, frame) -> dict:
-    # transpose the image to color first, reduce range to 0 - 1 and add batch dimension.
-    frame = frame.transpose((2, 0, 1))
-    frame = frame / 255
-    frame = np.expand_dims(frame, axis=0)
-    torch_frame = torch.from_numpy(frame).float()
-
+    # Transform the image to tensor
+    torch_frame = transform(frame).unsqueeze(0)
     prediction = model(torch_frame)
-
     return prediction[0]
 
 
-def run_on_single_frame_and_log_performance(model, model_name:str):
-    log_filename = "logged_performance.json"
-    logged_json_data = {}
+def log_performance_metrics(log_filename, model_name, fps_list, elapsed_time_list):
+    logged_data = {}
 
-    # load the data from the json file if it exists
-    # if it doesn't exist create log file
+    # Load existing data
     if os.path.exists(log_filename):
-        with open(log_filename) as f:
-            logged_json_data = json.load(f)
-    else:
-        with open(log_filename, "w") as f:
-            json.dump({}, f, indent=4)
+        with open(log_filename, 'r') as f:
+            logged_data = json.load(f)
+    
+    # Calculate average metrics
+    avg_fps = sum(fps_list) / len(fps_list) if fps_list else 0
+    avg_elapsed_time = sum(elapsed_time_list) / len(elapsed_time_list) if elapsed_time_list else 0
+
+    # Log the new data
+    logged_data[model_name] = {
+        "average_fps": avg_fps,
+        "average_elapsed_time": avg_elapsed_time
+    }
+
+    with open(log_filename, 'w') as f:
+        json.dump(logged_data, f, indent=4)
+
+
+def run_on_single_frame_and_log_performance(model, model_name: str):
+    log_filename = "logged_performance.json"
     
     if CAM.isOpened():
         ret, frame = CAM.read()
+        if not ret:
+            print("Failed to grab frame.")
+            return
 
-        # run image through the model
+        # Run image through the model
         start_time = time.time()
         predictions = run_object_detection(model, frame)
         end_time = time.time()
 
-        # print out top three predictions
+        # Print out top three predictions
         scores = predictions["scores"].detach().numpy()
         labels = predictions["labels"].detach().numpy()
+        top_indices = np.argsort(scores)[-3:][::-1]  # Get top 3 indices in descending order
 
-        top_three_detection_scores = np.sort(scores, axis=0)[-3:]
-        for score in top_three_detection_scores:
-            index = np.where(scores == score)[0][0]
+        for idx in top_indices:
+            print(f"Detection: {coco_labels[labels[idx]]}, Score: {scores[idx]:.2f}")
 
-            print(f"Detection: {coco_labels[labels[index]]}, Score: {score}")
-
-        # log model performance
+        # Log model performance
         elapsed_time = end_time - start_time
-        fps = 1/elapsed_time
+        fps = 1 / elapsed_time
+        print(f"FPS: {fps:.2f} | Elapsed Time: {elapsed_time:.2f} seconds")
 
-        print(f"Fps: {1/elapsed_time:.2f} | elapsed_time: {elapsed_time:.2f}")
+        log_performance_metrics(log_filename, model_name, [fps], [elapsed_time])
 
 
 def run_on_live_feed_and_log_performance(model, model_name: str):
-
     log_filename = "logged_performance.json"
-    logged_json_data = {}
     logged_fps = []
     logged_elapsed_time = []
-
-    # load the data from the json file if it exists
-    # if it doesn't exist create log file
-    if os.path.exists(log_filename):
-        with open(log_filename) as f:
-            logged_json_data = json.load(f)
-    else:
-        with open(log_filename, "w") as f:
-            json.dump({}, f, indent=4)
 
     try:
         while CAM.isOpened():
             ret, frame = CAM.read()
+            if not ret:
+                print("Failed to grab frame.")
+                break
 
-            # run image through the model
+            # Run image through the model
             start_time = time.time()
             predictions = run_object_detection(model, frame)
             end_time = time.time()
 
-            # print out top three predictions
+            # Print out top three predictions
             scores = predictions["scores"].detach().numpy()
             labels = predictions["labels"].detach().numpy()
+            top_indices = np.argsort(scores)[-3:][::-1]  # Get top 3 indices in descending order
 
-            top_three_detection_scores = np.sort(scores, axis=0)[-3:]
-            for score in top_three_detection_scores:
-                index = np.where(scores == score)[0][0]
+            for idx in top_indices:
+                print(f"Detection: {coco_labels[labels[idx]]}, Score: {scores[idx]:.2f}")
 
-                print(f"Detection: {coco_labels[labels[index]]}, Score: {score}")
-
-            # log model performance
+            # Log model performance
             elapsed_time = end_time - start_time
-            fps = 1/elapsed_time
-
-            print(f"Fps: {1/elapsed_time:.2f} | elapsed_time: {elapsed_time:.2f}")
+            fps = 1 / elapsed_time
+            print(f"FPS: {fps:.2f} | Elapsed Time: {elapsed_time:.2f} seconds")
 
             logged_elapsed_time.append(elapsed_time)
             logged_fps.append(fps)
 
-    except Exception:
+            # Log Raspberry Pi CPU and Memory usage
+            cpu_usage = psutil.cpu_percent()
+            memory_info = psutil.virtual_memory()
+            print(f"CPU Usage: {cpu_usage}% | Memory Usage: {memory_info.percent}%")
 
-        logged_json_data[model_name] = {"average_fps": sum(logged_fps)/len(logged_fps),
-                                        "average_elapsed_time": sum(logged_elapsed_time)/len(logged_elapsed_time)}
+    except KeyboardInterrupt:
+        print("Stopping live feed...")
 
-        with open(log_filename, 'w') as f:
-            json.dump(logged_json_data, f, indent=4)
-    
-
-# # load the model
-# ssd_model = detection.ssdlite320_mobilenet_v3_large(weights=detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
-# ssd_model.eval()
+    finally:
+        log_performance_metrics(log_filename, model_name, logged_fps, logged_elapsed_time)
+        CAM.release()
+        cv2.destroyAllWindows()
 
 
-# # quantize the model
-# quantized_model = torch.quantization.quantize_dynamic(ssd_model, {nn.Linear}, dtype=torch.qint8)
+if __name__ == "__main__":
+    # Load the model
+    ssd_model = detection.ssdlite320_mobilenet_v3_large(weights=detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT)
+    ssd_model.eval()
 
-# # compile the model
-# optimized_model = torch.compile(ssd_model)
-# torch.save(optimized_model, "quantized_and_compiled_ssdlite320_mobilenet.pt")
+    # Quantize the model (dynamic quantization)
+    quantized_model = torch.quantization.quantize_dynamic(ssd_model, {nn.Linear}, dtype=torch.qint8)
+
+    # Compile the model for faster inference (PyTorch 2.x)
+    if hasattr(torch, 'compile'):
+        optimized_model = torch.compile(quantized_model)
+    else:
+        optimized_model = quantized_model
+
+    torch.save(optimized_model, "quantized_and_compiled_ssdlite320_mobilenet.pt")
+
+    # Load the saved model
+    optimized_model = torch.load("quantized_and_compiled_ssdlite320_mobilenet.pt", weights_only=False)
+
+    # Run the model on live feed and log performance
+    run_on_live_feed_and_log_performance(optimized_model, "compiled_ssd_model")
+    # or run on a single frame
+    # run_on_single_frame_and_log_performance(optimized_model, "compiled_ssd_model")
+
 
 
 # load the saved model
