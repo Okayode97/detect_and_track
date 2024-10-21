@@ -193,6 +193,36 @@ class Tracker:
 
     # detections = np.ndarray
     def update_filters(self, detections: np.ndarray):
+        """
+        def update_filters(self, detections: np.ndarray):
+    associations = self.associate_detections_to_tracks(detections)
+
+    # Update all associated tracks
+    for filter_id, associated_detection_id in associations.items():
+        track = self.list_of_tracks[filter_id]
+        track.filter.update(detections[associated_detection_id])
+        track.filter.staleness_count = max(0, track.filter.staleness_count - 1)
+
+    # Handle unassociated tracks and detections
+    new_tracks = []
+    for i, track in enumerate(self.list_of_tracks):
+        if i not in associations.keys():
+            track.filter.update(np.array([]))  # No detection for this track
+            track.filter.staleness_count += 1
+            if track.filter.staleness_count < self.track_max_staleness:
+                new_tracks.append(track)
+        else:
+            new_tracks.append(track)
+    
+    self.list_of_tracks = new_tracks
+    """""
+
+    # Create new tracks for unassociated detections
+    for i, detection in enumerate(detections):
+        if i not in associations.values():
+            self.list_of_tracks.append(Track(KF_filter(detection, self.dt), self.track_id))
+            self.track_id += 1
+
         
         # associate detections to tracks
         associations = self.associate_detections_to_tracks(detections)
