@@ -1,7 +1,7 @@
 import os
 import json
 import pytest
-from src.detector.logging import log_results, incremental_average
+from src.detector.custom_logging import log_results, incremental_average
 
 
 class TestLogResults:
