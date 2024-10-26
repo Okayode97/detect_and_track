@@ -18,11 +18,11 @@ ssd_model = detection.ssdlite320_mobilenet_v3_large(weights=detection.SSDLite320
 ssd_model.eval()
 
 
-# quantize the model
-quantized_model = torch.quantization.quantize_dynamic(ssd_model, {nn.Linear}, dtype=torch.qint8)
+# # quantize the model
+# quantized_model = torch.quantization.quantize_dynamic(ssd_model, {nn.Linear}, dtype=torch.qint8)
 
 # compile the model
-optimized_model = torch.compile(quantized_model)
+optimized_model = torch.compile(ssd_model)
 torch.save(optimized_model, "quantized_and_compiled_ssdlite320_mobilenet.pt")
 
 
