@@ -57,15 +57,6 @@ W.R.T latency and throughput for my application, actionable tasks i can take to 
 - Scale up horizontally, possibly using kubernetes to deploy muitple instances of the model servers. Using this approach would also require looking into use of multi-threading, asynchronous programming and communciation, to determine how to handle receving multiple responses from different sources.
 - Look into optimizing code to process incoming data.
 
-## Optimized inference engines 
-
-
-## Model distillations
-
-## Core pinning
-
-------------------------------
-## Qnnpack with Pytorch
 
 ## Model Quantization
 
@@ -102,8 +93,18 @@ Issues/Gotchas
 - QAT requires additional training time & increases the complexity of the training process.
 
 
-
 ## Just in time compilation (JIT)
+
+
+
+## Optimized inference engines 
+
+## Model distillations
+
+## Core pinning
+
+## Qnnpack with Pytorch
+
 
 
 
