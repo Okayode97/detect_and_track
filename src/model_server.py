@@ -13,14 +13,14 @@ from detector.detector import ssd_model,  run_full_detection, ModelQuantizationW
 from detector.custom_logging import log_results, log_detections
 
 app = FastAPI()
-find_all_conv2d_norm_activation_blocks_and_fuse_them(ssd_model.backbone.features)
+find_all_conv2d_norm_activation_blocks_and_fuse_them(ssd_model)
 ssd_model_wrapped_input = ModelQuantizationWrapper(ssd_model)
 ssd_model_quantized = quantize_model_with_backend(ssd_model_wrapped_input)
 
 # setup server
 app.num_detections = 0
 app.model = ssd_model_quantized
-app.model_name = "ssd_model_quantized_test_2"
+app.model_name = "ssd_model_quantized_test_3"
 app.last_time = time.time()
 app.capture_interval = 30
 app.log_data = True
