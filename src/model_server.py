@@ -9,15 +9,18 @@ from fastapi import FastAPI, Request
 import cv2
 import numpy as np
 import time
-from detector.detector import retina_resnet50, ssd_model, fasterrcnn_mobilenet, fcos_resnet50, run_full_detection
-from detector.logging import log_results, log_detections
+from detector.detector import ssd_model,  run_full_detection, ModelQuantizationWrapper, quantize_model_with_backend
+from detector.custom_logging import log_results, log_detections
 
 app = FastAPI()
 
+ssd_model_wrapped_input = ModelQuantizationWrapper(ssd_model)
+ssd_model_quantized = quantize_model_with_backend(ssd_model_wrapped_input)
+
 # setup server
 app.num_detections = 0
-app.model = fcos_resnet50
-app.model_name = "fcos_resnet50"
+app.model = ssd_model_quantized
+app.model_name = "ssd_model_quantized"
 app.last_time = time.time()
 app.capture_interval = 30
 app.log_data = True

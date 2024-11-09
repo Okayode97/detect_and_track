@@ -106,3 +106,29 @@ def run_full_detection(model: Module, frame: np.ndarray, n_detection: int) -> di
 # returned box in format of xyxy, tracker requires box in format xyhw
 def convert_box_format(box_xyxy: np.ndarray) -> np.array:
     return box_convert(torch.from_numpy(box_xyxy), "xyxy", "xywh").detach().numpy()
+
+
+class ModelQuantizationWrapper(Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model_fp32 = model
+        self.quant = torch.quantization.QuantStub()
+        self.dequant = torch.quantization.DeQuantStub()
+        
+    def forward(self, x):
+        x = self.quant(x)
+        x = self.model_fp32(x)
+        x = self.dequant(x)
+        return x
+
+
+def quantize_model_with_backend(model: torch.nn.Module, backend: Optional[str] = "fbgemm"):
+
+    quantized_model = ModelQuantizationWrapper(model.to("cpu")) # not really quantized, but it's inputs and outputs have been wrapped with quantization stub
+
+    quantized_model.qconfig = torch.quantization.get_default_qconfig(backend)
+    torch.backends.quantized.engine = backend
+    model_static_quantized = torch.quantization.prepare(quantized_model, inplace=False)
+    model_static_quantized = torch.quantization.convert(quantized_model, inplace=False)
+
+    return model_static_quantized
