@@ -1,7 +1,7 @@
 from typing import Optional
 import os
 import json
-from src.detector.label import coco_labels
+from detector.label import coco_labels
 import cv2
 
 def incremental_average(current_average: float, new_value: float, count: int) -> float:

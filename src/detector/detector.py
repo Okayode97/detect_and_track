@@ -12,6 +12,7 @@ from torchvision.ops import box_convert
 import numpy as np
 from typing import Optional
 from time import time
+from torch.ao.quantization import fuse_modules
 
 
 # ssdlite320 with mobilenet_v3_large_weights box MAP (21.3), Params (3.4M), GFLOPs (0.58)
@@ -132,3 +133,24 @@ def quantize_model_with_backend(model: torch.nn.Module, backend: Optional[str] =
     model_static_quantized = torch.quantization.convert(quantized_model, inplace=False)
 
     return model_static_quantized
+
+
+def find_all_conv2d_norm_activation_blocks_and_fuse_them(model):
+
+    def recurse_submodules(modules):
+        for name, sub_module in modules.named_children():
+            if type(sub_module) == torch.nn.modules.container.Sequential:
+               for layer in sub_module:
+                   if type(layer).__name__ == 'Conv2dNormActivation':
+                        if type(layer[1]) == torch.nn.modules.batchnorm.BatchNorm2d:
+                            fuse_modules(layer, ["0", "1"], inplace=True)
+                   else:
+                        recurse_submodules(sub_module)
+            else:
+                if type(sub_module).__name__ == 'Conv2dNormActivation':
+                    if type(sub_module[1]) == torch.nn.modules.batchnorm.BatchNorm2d:
+                        fuse_modules(sub_module, ["0", "1"], inplace=True)
+                else:
+                    recurse_submodules(sub_module)
+
+    recurse_submodules(model)
