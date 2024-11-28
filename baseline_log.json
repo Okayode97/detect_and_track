@@ -58,5 +58,15 @@
             "avg": 2.0923216846853774,
             "count": 85
         }
+    },
+    "ssd_model_quantized_test_3": {
+        "elasped_time": {
+            "avg": 0.5094352840173123,
+            "count": 67
+        },
+        "fps": {
+            "avg": 1.9968436610215947,
+            "count": 67
+        }
     }
 }
