@@ -8,9 +8,22 @@ Approach to model server
 from fastapi import FastAPI, Request
 import cv2
 import numpy as np
-from detector.detector import retina_resnet50, ssd_model, run_full_detection
+import time
+from detector.detector import ssd_model,  run_full_detection, ModelQuantizationWrapper, quantize_model_with_backend, find_all_conv2d_norm_activation_blocks_and_fuse_them
+from detector.custom_logging import log_results, log_detections
 
 app = FastAPI()
+find_all_conv2d_norm_activation_blocks_and_fuse_them(ssd_model)
+ssd_model_wrapped_input = ModelQuantizationWrapper(ssd_model)
+ssd_model_quantized = quantize_model_with_backend(ssd_model_wrapped_input)
+
+# setup server
+app.num_detections = 0
+app.model = ssd_model_quantized
+app.model_name = "ssd_model_quantized_test_3"
+app.last_time = time.time()
+app.capture_interval = 30
+app.log_data = True
 
 def decode_bytes_to_img(bytes):
     img = np.asarray(bytearray(bytes), dtype="uint8")
@@ -18,12 +31,19 @@ def decode_bytes_to_img(bytes):
     return decoded_img
 
 
-
 @app.post("/images")
 async def get_model_prediction(request: Request):
     data = await request.body()
     img = decode_bytes_to_img(data)
-    detections = run_full_detection(ssd_model, img, 5)
+    detections = run_full_detection(app.model, img, 5)
+
+    if app.log_data:
+        log_results(detections["metrics"], "baseline", app.model_name)
+        current_time = time.time()
+        if current_time - app.last_time >= app.capture_interval:
+            log_detections(img, detections["detections"], f"./.data/{app.model_name}_detection_{app.num_detections}.png")
+            app.num_detections += 1
+            app.last_time = current_time
     return detections
 
 if __name__ == "__main__":

@@ -1,0 +1,72 @@
+{
+    "ssd_model": {
+        "elasped_time": {
+            "avg": 0.5273056934230139,
+            "count": 212
+        },
+        "fps": {
+            "avg": 1.8887083508729288,
+            "count": 212
+        }
+    },
+    "retina_resnet50": {
+        "elasped_time": {
+            "avg": 19.14485461976793,
+            "count": 16
+        },
+        "fps": {
+            "avg": 0.04772221634138764,
+            "count": 16
+        }
+    },
+    "fasterrcnn_mobilenet": {
+        "elasped_time": {
+            "avg": 3.4976557978877323,
+            "count": 46
+        },
+        "fps": {
+            "avg": 0.28186944418481097,
+            "count": 46
+        }
+    },
+    "fcos_resnet50": {
+        "elasped_time": {
+            "avg": 17.011849017370313,
+            "count": 15
+        },
+        "fps": {
+            "avg": 0.05335147856388157,
+            "count": 15
+        }
+    },
+    "ssd_model_quantized": {
+        "elasped_time": {
+            "avg": 0.5632272513843325,
+            "count": 118
+        },
+        "fps": {
+            "avg": 1.8348934610756114,
+            "count": 118
+        }
+    },
+    "ssd_model_quantized_test_2": {
+        "elasped_time": {
+            "avg": 0.47154412477735497,
+            "count": 85
+        },
+        "fps": {
+            "avg": 2.0923216846853774,
+            "count": 85
+        }
+    },
+    "ssd_model_quantized_test_3": {
+        "elasped_time": {
+            "avg": 0.5094352840173123,
+            "count": 67
+        },
+        "fps": {
+            "avg": 1.9968436610215947,
+            "count": 67
+        }
+    }
+}
